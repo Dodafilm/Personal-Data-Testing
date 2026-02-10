@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"C:\\\\TD_Applications\\\\Personal-Data-Testing\" log --oneline -5)",
+      "Bash(git -C \"C:\\\\TD_Applications\\\\Personal-Data-Testing\" show --stat)",
+      "Bash(git -C \"C:\\\\TD_Applications\\\\Personal-Data-Testing\" remote -v)",
+      "Bash(git -C \"C:\\\\TD_Applications\\\\Personal-Data-Testing\" branch -a)",
+      "WebSearch",
+      "WebFetch(domain:cloud.ouraring.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:wearipedia.readthedocs.io)"
+    ]
+  }
+}

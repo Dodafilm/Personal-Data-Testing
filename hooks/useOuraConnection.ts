@@ -61,13 +61,31 @@ export function useOuraConnection() {
         }
         const data = await res.json();
         const normalized = ep.normalize(data);
-        // Route through store context (local or cloud)
         const saveResult = store.saveDays(normalized);
         if (saveResult instanceof Promise) await saveResult;
         result[ep.key] = normalized.length;
       } catch (err) {
         result.errors.push((err as Error).message);
       }
+    }
+
+    // Try detailed sleep periods for intraday data (phases, bedtime timestamps).
+    // This endpoint requires the Sleep scope which may not be available —
+    // a 401 here just means we keep the daily summary data from above.
+    try {
+      const res = await fetch(`/api/oura/sleep_periods?start_date=${startDate}&end_date=${endDate}`);
+      if (res.ok) {
+        const data = await res.json();
+        const detailed = normalizeOuraSleep(data);
+        if (detailed.length > 0) {
+          const saveResult = store.saveDays(detailed);
+          if (saveResult instanceof Promise) await saveResult;
+          result.sleep = detailed.length;
+        }
+      }
+      // 401 or other errors silently skipped — daily_sleep data is sufficient
+    } catch {
+      // Detailed sleep not available, that's fine
     }
 
     const total = result.sleep + result.heart + result.workout + result.stress;

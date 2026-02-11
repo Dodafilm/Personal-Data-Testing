@@ -65,16 +65,20 @@ export async function GET(
     });
 
     if (apiRes.status === 401) {
-      // Token expired — clear cookie and DB token
-      if (session?.user?.id) {
-        await prisma.userSettings.update({
-          where: { userId: session.user.id },
-          data: { ouraAccessToken: null, ouraRefreshToken: null, ouraTokenExpiry: null },
-        });
+      // For sleep_periods, a 401 likely means missing Sleep scope, not an expired token.
+      // Don't clear stored tokens — other endpoints still work fine.
+      if (endpoint !== 'sleep_periods') {
+        if (session?.user?.id) {
+          await prisma.userSettings.update({
+            where: { userId: session.user.id },
+            data: { ouraAccessToken: null, ouraRefreshToken: null, ouraTokenExpiry: null },
+          });
+        }
+        const response = NextResponse.json({ error: 'Token expired' }, { status: 401 });
+        response.cookies.delete('oura_token');
+        return response;
       }
-      const response = NextResponse.json({ error: 'Token expired' }, { status: 401 });
-      response.cookies.delete('oura_token');
-      return response;
+      return NextResponse.json({ error: 'Scope not available' }, { status: 401 });
     }
 
     if (!apiRes.ok) {

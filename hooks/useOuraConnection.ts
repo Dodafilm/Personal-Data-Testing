@@ -2,12 +2,13 @@
 
 import { useState, useCallback } from 'react';
 import { useStore } from '@/lib/store-provider';
-import { normalizeOuraSleep, normalizeOuraHeartRate, normalizeOuraActivity } from '@/lib/data-adapter';
+import { normalizeOuraSleep, normalizeOuraHeartRate, normalizeOuraActivity, normalizeOuraStress } from '@/lib/data-adapter';
 
 interface FetchResult {
   sleep: number;
   heart: number;
   workout: number;
+  stress: number;
   errors: string[];
 }
 
@@ -41,9 +42,10 @@ export function useOuraConnection() {
       { path: 'daily_sleep', key: 'sleep' as const, normalize: normalizeOuraSleep },
       { path: 'heartrate', key: 'heart' as const, normalize: normalizeOuraHeartRate },
       { path: 'daily_activity', key: 'workout' as const, normalize: normalizeOuraActivity },
+      { path: 'daily_stress', key: 'stress' as const, normalize: normalizeOuraStress },
     ];
 
-    const result: FetchResult = { sleep: 0, heart: 0, workout: 0, errors: [] };
+    const result: FetchResult = { sleep: 0, heart: 0, workout: 0, stress: 0, errors: [] };
 
     for (const ep of endpoints) {
       try {
@@ -68,7 +70,7 @@ export function useOuraConnection() {
       }
     }
 
-    const total = result.sleep + result.heart + result.workout;
+    const total = result.sleep + result.heart + result.workout + result.stress;
     let msg = `Imported ${total} records`;
     if (result.errors.length > 0) {
       msg += ` (${result.errors.length} failed: ${result.errors.join('; ')})`;

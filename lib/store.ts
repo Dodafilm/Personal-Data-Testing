@@ -92,6 +92,7 @@ function mergeDay(existing: DayRecord, incoming: DayRecord): DayRecord {
     sleep: { ...(existing.sleep || {}), ...(incoming.sleep || {}) } as DayRecord['sleep'],
     heart: { ...(existing.heart || {}), ...(incoming.heart || {}) } as DayRecord['heart'],
     workout: { ...(existing.workout || {}), ...(incoming.workout || {}) } as DayRecord['workout'],
+    stress: { ...(existing.stress || {}), ...(incoming.stress || {}) } as DayRecord['stress'],
   };
 }
 

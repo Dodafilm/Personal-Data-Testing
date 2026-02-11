@@ -12,15 +12,15 @@ import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import WorkoutCharts from '@/components/charts/WorkoutCharts';
-import ComingSoon from '@/components/ComingSoon';
+import StressCharts from '@/components/charts/StressCharts';
+import SleepHeatmap from '@/components/charts/SleepHeatmap';
+import MetricHeatmap from '@/components/charts/MetricHeatmap';
+import CalendarDayPicker from '@/components/CalendarDayPicker';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
 import type { DayRecord } from '@/lib/types';
-import { SleepTerrain } from '@/components/three/data-viz/sleep-terrain';
-import { MetricSpheres } from '@/components/three/data-viz/metric-spheres';
 
 const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground'), { ssr: false });
-const ThreeInline = dynamic(() => import('@/components/three/ThreeInline'), { ssr: false });
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -31,6 +31,26 @@ export default function DashboardPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
+
+  // Calendar day picker state — defaults to all days in month
+  const daysInMonth = new Date(monthData.year, monthData.month, 0).getDate();
+  const [selectedDays, setSelectedDays] = useState<Set<number>>(() =>
+    new Set(Array.from({ length: daysInMonth }, (_, i) => i + 1))
+  );
+
+  // Reset selectedDays when month changes
+  useEffect(() => {
+    const days = new Date(monthData.year, monthData.month, 0).getDate();
+    setSelectedDays(new Set(Array.from({ length: days }, (_, i) => i + 1)));
+  }, [monthData.year, monthData.month]);
+
+  // Filtered data for heatmaps (only selected days)
+  const filteredData = useMemo(() => {
+    return monthData.data.filter(d => {
+      const day = parseInt(d.date.slice(8), 10);
+      return selectedDays.has(day);
+    });
+  }, [monthData.data, selectedDays]);
 
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
@@ -101,9 +121,6 @@ export default function DashboardPage() {
     monthData.refresh();
   }, [monthData]);
 
-  const sleepTerrainFactory = useMemo(() => () => new SleepTerrain(), []);
-  const metricSpheresFactory = useMemo(() => () => new MetricSpheres(), []);
-
   return (
     <>
       <ThreeBackground effect={bgEffect} data={monthData.data} />
@@ -134,14 +151,18 @@ export default function DashboardPage() {
 
         <SyncPrompt />
 
+        <CalendarDayPicker
+          year={monthData.year}
+          month={monthData.month}
+          selectedDays={selectedDays}
+          onChange={setSelectedDays}
+        />
+
         {/* Sleep Section */}
         <section className="metric-section">
           <h2 className="section-title sleep">Sleep</h2>
           <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <div className="viz-3d-container">
-            <h3>Sleep Terrain</h3>
-            <ThreeInline data={monthData.data} effectFactory={sleepTerrainFactory} />
-          </div>
+          <SleepHeatmap data={filteredData} />
         </section>
 
         {/* Heart Rate Section */}
@@ -154,13 +175,14 @@ export default function DashboardPage() {
         <section className="metric-section">
           <h2 className="section-title workout">Workouts &amp; Activity</h2>
           <WorkoutCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <div className="viz-3d-container">
-            <h3>Metric Spheres</h3>
-            <ThreeInline data={monthData.data} effectFactory={metricSpheresFactory} />
-          </div>
+          <MetricHeatmap data={filteredData} />
         </section>
 
-        <ComingSoon />
+        {/* Stress Section */}
+        <section className="metric-section">
+          <h2 className="section-title stress">Stress</h2>
+          <StressCharts data={monthData.data} onDayClick={setSelectedDay} />
+        </section>
       </div>
 
       <DayDetail

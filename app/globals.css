@@ -15,6 +15,7 @@
   --accent-sleep: #74b9ff;
   --accent-heart: #ff6b6b;
   --accent-workout: #55efc4;
+  --accent-stress: #ffa500;
   --accent-danger: #d63031;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   --radius: 12px;
@@ -386,6 +387,7 @@ body {
 .section-title.sleep { color: var(--accent-sleep); }
 .section-title.heart { color: var(--accent-heart); }
 .section-title.workout { color: var(--accent-workout); }
+.section-title.stress { color: var(--accent-stress); }
 
 /* ===== Stats Row ===== */
 .stats-row {
@@ -420,6 +422,7 @@ body {
 .stat-value.sleep { color: var(--accent-sleep); }
 .stat-value.heart { color: var(--accent-heart); }
 .stat-value.workout { color: var(--accent-workout); }
+.stat-value.stress { color: var(--accent-stress); }
 
 /* ===== Charts Grid ===== */
 .charts-grid {
@@ -956,6 +959,11 @@ body {
   border-color: var(--accent-workout);
 }
 
+.day-section-title.stress {
+  color: var(--accent-stress);
+  border-color: var(--accent-stress);
+}
+
 .day-stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1119,6 +1127,171 @@ body {
   font-size: 0.9rem;
 }
 
+/* ===== Heatmap ===== */
+.heatmap-container {
+  margin-top: 16px;
+  overflow-x: auto;
+  position: relative;
+}
+
+.heatmap-grid {
+  display: grid;
+  gap: 2px;
+  min-width: fit-content;
+}
+
+.heatmap-corner {
+  background: transparent;
+}
+
+.heatmap-day-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px 0 4px;
+}
+
+.heatmap-row-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  min-width: 18px;
+  min-height: 18px;
+  cursor: default;
+  transition: transform 0.15s ease;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.2);
+  z-index: 1;
+}
+
+.heatmap-tooltip {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: var(--shadow);
+}
+
+/* ===== Calendar Day Picker ===== */
+.day-picker {
+  background: rgba(26, 26, 46, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.day-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.day-picker-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day-picker-toggle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.day-picker-toggle:hover {
+  border-color: var(--accent-primary);
+}
+
+.day-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.day-picker-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.day-picker-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.day-picker-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.day-picker-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-picker-range input {
+  width: 70px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.day-picker-range input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.day-picker-range span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.day-picker-apply {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+}
+
 /* ===== Responsive additions ===== */
 @media (max-width: 768px) {
   .auth-card {
@@ -1136,5 +1309,24 @@ body {
   .day-detail-panel {
     width: 100%;
     right: -100%;
+  }
+
+  .heatmap-cell {
+    min-width: 14px;
+    min-height: 14px;
+  }
+
+  .heatmap-row-label {
+    font-size: 0.6rem;
+  }
+
+  .day-picker-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .day-picker-range {
+    flex-wrap: wrap;
   }
 }

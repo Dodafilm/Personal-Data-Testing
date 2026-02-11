@@ -34,7 +34,7 @@ function pctDiff(value: number, avg: number): { text: string; cls: string } | nu
 export default function DayDetail({ open, day, monthData, onClose, onNavigate }: DayDetailProps) {
   // Days with any data, sorted by date
   const daysWithData = useMemo(() =>
-    monthData.filter(d => d.sleep || d.heart || d.workout).sort((a, b) => a.date.localeCompare(b.date)),
+    monthData.filter(d => d.sleep || d.heart || d.workout || d.stress).sort((a, b) => a.date.localeCompare(b.date)),
     [monthData],
   );
 
@@ -135,7 +135,19 @@ export default function DayDetail({ open, day, monthData, onClose, onNavigate }:
               </div>
             )}
 
-            {!day.sleep && !day.heart && !day.workout && (
+            {/* Stress Section */}
+            {day.stress && (
+              <div className="day-section">
+                <h3 className="day-section-title stress">Stress</h3>
+                <div className="day-stat-grid">
+                  <StatCard label="High Stress" value={`${day.stress.stress_high}m`} />
+                  <StatCard label="Recovery" value={`${day.stress.recovery_high}m`} />
+                  <StatCard label="Summary" value={day.stress.day_summary} />
+                </div>
+              </div>
+            )}
+
+            {!day.sleep && !day.heart && !day.workout && !day.stress && (
               <p className="day-empty">No data recorded for this day.</p>
             )}
           </div>

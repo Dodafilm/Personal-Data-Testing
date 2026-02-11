@@ -53,6 +53,19 @@ export function normalizeOuraActivity(apiData: { data?: Array<Record<string, unk
   }));
 }
 
+export function normalizeOuraStress(apiData: { data?: Array<Record<string, unknown>> }): DayRecord[] {
+  if (!apiData || !apiData.data) return [];
+  return apiData.data.map(item => ({
+    date: item.day as string,
+    source: 'oura',
+    stress: {
+      stress_high: (item.stress_high as number) || 0,
+      recovery_high: (item.recovery_high as number) || 0,
+      day_summary: (item.day_summary as string) || 'normal',
+    },
+  }));
+}
+
 export function normalizeCsv(rows: Record<string, string>[]): DayRecord[] {
   if (!rows || !rows.length) return [];
   return rows.map(row => {
@@ -87,13 +100,20 @@ export function normalizeCsv(rows: Record<string, string>[]): DayRecord[] {
         active_min: parseNum(row.active_min || row.active_minutes),
       };
     }
+    if (row.stress_high || row.recovery_high || row.day_summary) {
+      day.stress = {
+        stress_high: parseNum(row.stress_high),
+        recovery_high: parseNum(row.recovery_high),
+        day_summary: row.day_summary || 'normal',
+      };
+    }
     return day;
   }).filter(d => d.date);
 }
 
 export function normalizeJson(data: unknown): DayRecord[] {
   if (Array.isArray(data)) {
-    if (data[0] && data[0].date && (data[0].sleep || data[0].heart || data[0].workout)) {
+    if (data[0] && data[0].date && (data[0].sleep || data[0].heart || data[0].workout || data[0].stress)) {
       return data;
     }
   }
@@ -104,6 +124,7 @@ export function normalizeJson(data: unknown): DayRecord[] {
       if (first.total_sleep_duration != null) return normalizeOuraSleep(obj as { data: Array<Record<string, unknown>> });
       if (first.bpm != null) return normalizeOuraHeartRate(obj as { data: Array<Record<string, unknown>> });
       if (first.steps != null || first.active_calories != null) return normalizeOuraActivity(obj as { data: Array<Record<string, unknown>> });
+      if (first.stress_high != null || first.day_summary != null) return normalizeOuraStress(obj as { data: Array<Record<string, unknown>> });
     }
   }
   return [];

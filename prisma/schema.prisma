@@ -72,6 +72,7 @@ model HealthRecord {
   sleep     Json?    // SleepData
   heart     Json?    // HeartData
   workout   Json?    // WorkoutData
+  stress    Json?    // StressData
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

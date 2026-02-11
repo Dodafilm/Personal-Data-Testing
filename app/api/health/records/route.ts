@@ -51,6 +51,7 @@ export async function GET(request: Request) {
     sleep: r.sleep as unknown as DayRecord['sleep'],
     heart: r.heart as unknown as DayRecord['heart'],
     workout: r.workout as unknown as DayRecord['workout'],
+    stress: r.stress as unknown as DayRecord['stress'],
   }));
 
   return NextResponse.json(days);
@@ -77,12 +78,14 @@ export async function POST(request: Request) {
       sleep: toJson(day.sleep),
       heart: toJson(day.heart),
       workout: toJson(day.workout),
+      stress: toJson(day.stress),
     },
     update: {
       source: day.source ?? undefined,
       sleep: toJson(day.sleep),
       heart: toJson(day.heart),
       workout: toJson(day.workout),
+      stress: toJson(day.stress),
     },
   });
 
@@ -113,12 +116,14 @@ export async function PUT(request: Request) {
         sleep: toJson(day.sleep),
         heart: toJson(day.heart),
         workout: toJson(day.workout),
+        stress: toJson(day.stress),
       },
       update: {
         source: day.source ?? undefined,
         sleep: toJson(day.sleep),
         heart: toJson(day.heart),
         workout: toJson(day.workout),
+        stress: toJson(day.stress),
       },
     });
     count++;

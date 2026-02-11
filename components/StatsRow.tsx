@@ -7,7 +7,7 @@ interface Stat {
 
 interface StatsRowProps {
   stats: Stat[];
-  colorClass: 'sleep' | 'heart' | 'workout';
+  colorClass: 'sleep' | 'heart' | 'workout' | 'stress';
   emptyMessage?: string;
 }
 

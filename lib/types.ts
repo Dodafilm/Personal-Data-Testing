@@ -42,12 +42,19 @@ export interface WorkoutData {
   active_min: number;
 }
 
+export interface StressData {
+  stress_high: number;      // minutes of high stress
+  recovery_high: number;    // minutes of high recovery
+  day_summary: string;      // "restored" | "normal" | "stressful"
+}
+
 export interface DayRecord {
   date: string;
   source?: string;
   sleep?: SleepData;
   heart?: HeartData;
   workout?: WorkoutData;
+  stress?: StressData;
 }
 
 export interface Settings {

@@ -38,6 +38,7 @@ export async function POST(request: Request) {
           sleep: existing.sleep ?? toJson(day.sleep),
           heart: existing.heart ?? toJson(day.heart),
           workout: existing.workout ?? toJson(day.workout),
+          stress: existing.stress ?? toJson(day.stress),
         },
       });
     } else {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
           sleep: toJson(day.sleep),
           heart: toJson(day.heart),
           workout: toJson(day.workout),
+          stress: toJson(day.stress),
         },
       });
     }

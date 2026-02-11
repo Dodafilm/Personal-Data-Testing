@@ -57,6 +57,18 @@ export async function GET(request: Request) {
   return NextResponse.json(days);
 }
 
+// Build an update object with only the fields that have actual data,
+// so we never accidentally overwrite existing categories with null.
+function buildUpdate(day: DayRecord) {
+  const update: Record<string, unknown> = {};
+  if (day.source) update.source = day.source;
+  if (day.sleep) update.sleep = toJson(day.sleep);
+  if (day.heart) update.heart = toJson(day.heart);
+  if (day.workout) update.workout = toJson(day.workout);
+  if (day.stress) update.stress = toJson(day.stress);
+  return update;
+}
+
 // POST /api/health/records — upsert a single day
 export async function POST(request: Request) {
   const session = await auth();
@@ -80,13 +92,7 @@ export async function POST(request: Request) {
       workout: toJson(day.workout),
       stress: toJson(day.stress),
     },
-    update: {
-      source: day.source ?? undefined,
-      sleep: toJson(day.sleep),
-      heart: toJson(day.heart),
-      workout: toJson(day.workout),
-      stress: toJson(day.stress),
-    },
+    update: buildUpdate(day),
   });
 
   return NextResponse.json({ ok: true });
@@ -118,13 +124,7 @@ export async function PUT(request: Request) {
         workout: toJson(day.workout),
         stress: toJson(day.stress),
       },
-      update: {
-        source: day.source ?? undefined,
-        sleep: toJson(day.sleep),
-        heart: toJson(day.heart),
-        workout: toJson(day.workout),
-        stress: toJson(day.stress),
-      },
+      update: buildUpdate(day),
     });
     count++;
   }

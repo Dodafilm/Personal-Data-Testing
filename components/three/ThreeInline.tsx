@@ -1,9 +1,15 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import type { DayRecord } from '@/lib/types';
-import { InlineSceneManager } from './scene-manager';
-import type { SceneEffect } from './scene-manager';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface SceneEffect {
+  init(scene: any, camera: any): void;
+  update?(data: any[], n: number): void;
+  animate?(d: number, e: number): void;
+  dispose(scene: any): void;
+}
 
 interface ThreeInlineProps {
   data: DayRecord[];
@@ -12,24 +18,89 @@ interface ThreeInlineProps {
 
 export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const managerRef = useRef<InlineSceneManager | null>(null);
+  const managerRef = useRef<{ dispose: () => void } | null>(null);
   const dataRef = useRef(data);
+  const [error, setError] = useState<string | null>(null);
   dataRef.current = data;
 
   useEffect(() => {
     if (!canvasRef.current) return;
+    let disposed = false;
 
-    try {
-      const manager = new InlineSceneManager(canvasRef.current);
-      managerRef.current = manager;
-      manager.setEffect(effectFactory());
-      manager.start();
-      manager.updateData(dataRef.current);
-    } catch (err) {
-      console.error('ThreeInline init error:', err);
-    }
+    (async () => {
+      try {
+        const THREE = await import('three');
+        if (disposed || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x0f0f18, 1);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, 2, 0.1, 1000);
+        camera.position.set(0, 5, 20);
+        camera.lookAt(0, 0, 0);
+
+        const clock = new THREE.Clock();
+        let activeEffect: ReturnType<typeof effectFactory> | null = null;
+
+        const handleResize = () => {
+          if (!canvas.parentElement) return;
+          const rect = canvas.parentElement.getBoundingClientRect();
+          const w = rect.width;
+          const h = canvas.clientHeight || 300;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        };
+
+        const resizeObserver = new ResizeObserver(handleResize);
+        if (canvas.parentElement) resizeObserver.observe(canvas.parentElement);
+        handleResize();
+
+        // Create and set effect
+        activeEffect = effectFactory();
+        activeEffect.init(scene, camera);
+        if (activeEffect.update) {
+          activeEffect.update(dataRef.current, 0);
+        }
+
+        let running = true;
+        const animate = () => {
+          if (!running) return;
+          requestAnimationFrame(animate);
+          const delta = clock.getDelta();
+          const elapsed = clock.getElapsedTime();
+          if (activeEffect?.animate) activeEffect.animate(delta, elapsed);
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        const mgr = {
+          updateData: (d: DayRecord[]) => {
+            if (activeEffect?.update) activeEffect.update(d, 0);
+          },
+          dispose: () => {
+            running = false;
+            resizeObserver.disconnect();
+            if (activeEffect) activeEffect.dispose(scene);
+            renderer.dispose();
+          },
+        };
+        managerRef.current = mgr;
+
+        // Apply current data
+        mgr.updateData(dataRef.current);
+
+      } catch (err) {
+        console.error('ThreeInline error:', err);
+        setError(String(err));
+      }
+    })();
 
     return () => {
+      disposed = true;
       if (managerRef.current) {
         managerRef.current.dispose();
         managerRef.current = null;
@@ -39,10 +110,19 @@ export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
   }, []);
 
   useEffect(() => {
-    if (managerRef.current) {
-      managerRef.current.updateData(data);
+    if (managerRef.current && 'updateData' in managerRef.current) {
+      (managerRef.current as { updateData: (d: DayRecord[]) => void }).updateData(data);
     }
   }, [data]);
 
-  return <canvas ref={canvasRef} className="viz-3d-canvas" />;
+  return (
+    <div style={{ position: 'relative' }}>
+      <canvas ref={canvasRef} className="viz-3d-canvas" />
+      {error && (
+        <div style={{ position: 'absolute', top: 8, left: 8, color: 'red', fontSize: 11, background: 'rgba(0,0,0,0.8)', padding: 6, borderRadius: 4 }}>
+          3D: {error}
+        </div>
+      )}
+    </div>
+  );
 }

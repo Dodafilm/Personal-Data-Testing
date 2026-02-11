@@ -29,6 +29,9 @@
           <span>Connected to Oura</span>
         </div>
         <button id="connect-oura" class="btn btn-primary">Connect Oura Ring</button>
+        <label for="cors-proxy">CORS Proxy URL</label>
+        <input type="text" id="cors-proxy" placeholder="https://your-proxy.workers.dev">
+        <p class="setting-hint">Required for browser API calls. Deploy a free proxy with Cloudflare Workers, or run locally: <code>npx cors-anywhere</code> &rarr; <code>http://localhost:8080</code></p>
         <div class="setting-row">
           <label for="fetch-start">Date Range</label>
           <div class="date-range">

@@ -54,7 +54,7 @@ export function handleOAuthCallback() {
 
 // ===== API Fetching =====
 
-export async function fetchOuraData(token, startDate, endDate) {
+export async function fetchOuraData(token, startDate, endDate, proxyUrl = '') {
   if (!token) throw new Error('Not connected to Oura. Click "Connect Oura Ring" first.');
   if (!startDate || !endDate) throw new Error('Start and end dates are required');
 
@@ -68,7 +68,7 @@ export async function fetchOuraData(token, startDate, endDate) {
 
   for (const ep of endpoints) {
     try {
-      const data = await fetchEndpoint(token, ep.path, startDate, endDate);
+      const data = await fetchEndpoint(token, ep.path, startDate, endDate, proxyUrl);
       const normalized = ep.normalize(data);
       results[ep.key] = normalized;
       saveDays(normalized);
@@ -80,11 +80,14 @@ export async function fetchOuraData(token, startDate, endDate) {
   return results;
 }
 
-async function fetchEndpoint(token, path, startDate, endDate) {
+async function fetchEndpoint(token, path, startDate, endDate, proxyUrl) {
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
-  const url = `${BASE_URL}${path}?${params}`;
+  const apiUrl = `${BASE_URL}${path}?${params}`;
+  const fetchUrl = proxyUrl
+    ? `${proxyUrl.replace(/\/+$/, '')}/${apiUrl}`
+    : apiUrl;
 
-  const response = await fetch(url, {
+  const response = await fetch(fetchUrl, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -109,6 +112,7 @@ async function fetchEndpoint(token, path, startDate, endDate) {
 export function initOuraSettings() {
   const settings = loadSettings();
   const clientIdInput = document.getElementById('oura-client-id');
+  const proxyInput = document.getElementById('cors-proxy');
   const startInput = document.getElementById('fetch-start');
   const endInput = document.getElementById('fetch-end');
   const connectBtn = document.getElementById('connect-oura');
@@ -121,8 +125,9 @@ export function initOuraSettings() {
   const justConnected = handleOAuthCallback();
   const reloadedSettings = loadSettings();
 
-  // Restore client ID
+  // Restore client ID and proxy
   if (reloadedSettings.ouraClientId) clientIdInput.value = reloadedSettings.ouraClientId;
+  if (reloadedSettings.corsProxy) proxyInput.value = reloadedSettings.corsProxy;
 
   // Default date range: last 30 days
   const end = new Date();
@@ -158,9 +163,18 @@ export function initOuraSettings() {
   fetchBtn.addEventListener('click', async () => {
     const currentSettings = loadSettings();
     const token = currentSettings.ouraToken;
+    const proxy = proxyInput.value.trim();
+
+    saveSettings({ corsProxy: proxy });
 
     if (!token) {
       statusEl.textContent = 'Not connected. Click "Connect Oura Ring" first.';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+
+    if (!proxy) {
+      statusEl.textContent = 'A CORS proxy is required for browser-based API calls. See instructions below the field.';
       statusEl.className = 'status-msg error';
       return;
     }
@@ -169,7 +183,7 @@ export function initOuraSettings() {
     statusEl.className = 'status-msg loading';
 
     try {
-      const results = await fetchOuraData(token, startInput.value, endInput.value);
+      const results = await fetchOuraData(token, startInput.value, endInput.value, proxy);
       const total = results.sleep.length + results.heart.length + results.workout.length;
       let msg = `Imported ${total} records`;
       if (results.errors.length > 0) {

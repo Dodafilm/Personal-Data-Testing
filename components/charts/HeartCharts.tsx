@@ -1,16 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
-import { useChart, getDayLabels } from './useChart';
+import { useChart, useChartWithClick, getDayLabels } from './useChart';
 import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface HeartChartsProps {
   data: DayRecord[];
+  onDayClick?: (date: string) => void;
 }
 
-export default function HeartCharts({ data }: HeartChartsProps) {
+export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
   const stats = useMemo(() => {
     if (!data.length) return [];
     const vals = data.map(d => d.heart).filter(Boolean);
@@ -102,7 +103,11 @@ export default function HeartCharts({ data }: HeartChartsProps) {
     };
   }, [data]);
 
-  const restingRef = useChart(restingConfig);
+  const handleClickIndex = useCallback((index: number) => {
+    if (onDayClick && data[index]) onDayClick(data[index].date);
+  }, [onDayClick, data]);
+
+  const restingRef = useChartWithClick(restingConfig, handleClickIndex);
   const hrvRef = useChart(hrvConfig);
   const rangeRef = useChart(rangeConfig);
 

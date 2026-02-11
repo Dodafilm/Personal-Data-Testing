@@ -1,16 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
-import { useChart, getDayLabels } from './useChart';
+import { useChart, useChartWithClick, getDayLabels } from './useChart';
 import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface WorkoutChartsProps {
   data: DayRecord[];
+  onDayClick?: (date: string) => void;
 }
 
-export default function WorkoutCharts({ data }: WorkoutChartsProps) {
+export default function WorkoutCharts({ data, onDayClick }: WorkoutChartsProps) {
   const stats = useMemo(() => {
     if (!data.length) return [];
     const vals = data.map(d => d.workout).filter(Boolean);
@@ -99,7 +100,11 @@ export default function WorkoutCharts({ data }: WorkoutChartsProps) {
     };
   }, [data]);
 
-  const stepsRef = useChart(stepsConfig);
+  const handleClickIndex = useCallback((index: number) => {
+    if (onDayClick && data[index]) onDayClick(data[index].date);
+  }, [onDayClick, data]);
+
+  const stepsRef = useChartWithClick(stepsConfig, handleClickIndex);
   const caloriesRef = useChart(caloriesConfig);
   const activeRef = useChart(activeConfig);
 

@@ -79,6 +79,61 @@ export function useChart(config: ChartConfiguration | null) {
   return canvasRef;
 }
 
+export function useChartWithClick(
+  config: ChartConfiguration | null,
+  onClickIndex: (index: number) => void,
+) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartRef = useRef<Chart | null>(null);
+  const callbackRef = useRef(onClickIndex);
+  callbackRef.current = onClickIndex;
+
+  useEffect(() => {
+    if (!canvasRef.current || !config) return;
+
+    if (chartRef.current) {
+      chartRef.current.destroy();
+      chartRef.current = null;
+    }
+
+    const mergedConfig = {
+      ...config,
+      options: mergeDeep(
+        structuredClone(CHART_DEFAULTS) as Record<string, unknown>,
+        (config.options || {}) as Record<string, unknown>,
+      ),
+    };
+
+    const chart = new Chart(canvasRef.current, mergedConfig as ChartConfiguration);
+    chartRef.current = chart;
+
+    const canvas = canvasRef.current;
+    const handleClick = (event: MouseEvent) => {
+      const elements = chart.getElementsAtEventForMode(
+        event as unknown as Event,
+        'index',
+        { intersect: true },
+        false,
+      );
+      if (elements.length > 0) {
+        callbackRef.current(elements[0].index);
+      }
+    };
+    canvas.addEventListener('click', handleClick);
+    canvas.style.cursor = 'pointer';
+
+    return () => {
+      canvas.removeEventListener('click', handleClick);
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+    };
+  }, [config]);
+
+  return canvasRef;
+}
+
 export function getDayLabels(data: { date: string }[]): string[] {
   return data.map(d => {
     const day = parseInt(d.date.slice(8), 10);

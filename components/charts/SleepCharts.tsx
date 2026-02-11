@@ -1,16 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
-import { useChart, getDayLabels } from './useChart';
+import { useChart, useChartWithClick, getDayLabels } from './useChart';
 import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface SleepChartsProps {
   data: DayRecord[];
+  onDayClick?: (date: string) => void;
 }
 
-export default function SleepCharts({ data }: SleepChartsProps) {
+export default function SleepCharts({ data, onDayClick }: SleepChartsProps) {
   const stats = useMemo(() => {
     if (!data.length) return [];
     const vals = data.map(d => d.sleep).filter(Boolean);
@@ -97,7 +98,11 @@ export default function SleepCharts({ data }: SleepChartsProps) {
     };
   }, [data]);
 
-  const stagesRef = useChart(stagesConfig);
+  const handleClickIndex = useCallback((index: number) => {
+    if (onDayClick && data[index]) onDayClick(data[index].date);
+  }, [onDayClick, data]);
+
+  const stagesRef = useChartWithClick(stagesConfig, handleClickIndex);
   const durationRef = useChart(durationConfig);
   const readinessRef = useChart(readinessConfig);
 

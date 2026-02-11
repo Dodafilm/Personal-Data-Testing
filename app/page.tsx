@@ -8,6 +8,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useOuraConnection } from '@/hooks/useOuraConnection';
 import DashboardHeader from '@/components/DashboardHeader';
 import SettingsPanel from '@/components/SettingsPanel';
+import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import WorkoutCharts from '@/components/charts/WorkoutCharts';
@@ -28,6 +29,7 @@ export default function DashboardPage() {
   const { settings, updateSettings } = useSettings();
   const oura = useOuraConnection();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
 
   // Load sample data on first run (local mode only), then refresh
@@ -135,7 +137,7 @@ export default function DashboardPage() {
         {/* Sleep Section */}
         <section className="metric-section">
           <h2 className="section-title sleep">Sleep</h2>
-          <SleepCharts data={monthData.data} />
+          <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
           <div className="viz-3d-container">
             <h3>Sleep Terrain</h3>
             <ThreeInline data={monthData.data} effectFactory={sleepTerrainFactory} />
@@ -145,13 +147,13 @@ export default function DashboardPage() {
         {/* Heart Rate Section */}
         <section className="metric-section">
           <h2 className="section-title heart">Heart Rate</h2>
-          <HeartCharts data={monthData.data} />
+          <HeartCharts data={monthData.data} onDayClick={setSelectedDay} />
         </section>
 
         {/* Workout Section */}
         <section className="metric-section">
           <h2 className="section-title workout">Workouts &amp; Activity</h2>
-          <WorkoutCharts data={monthData.data} />
+          <WorkoutCharts data={monthData.data} onDayClick={setSelectedDay} />
           <div className="viz-3d-container">
             <h3>Metric Spheres</h3>
             <ThreeInline data={monthData.data} effectFactory={metricSpheresFactory} />
@@ -160,6 +162,14 @@ export default function DashboardPage() {
 
         <ComingSoon />
       </div>
+
+      <DayDetail
+        open={!!selectedDay}
+        day={monthData.data.find(d => d.date === selectedDay) ?? null}
+        monthData={monthData.data}
+        onClose={() => setSelectedDay(null)}
+        onNavigate={setSelectedDay}
+      />
     </>
   );
 }

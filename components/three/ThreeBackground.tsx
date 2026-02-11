@@ -14,17 +14,20 @@ interface ThreeBackgroundProps {
 export default function ThreeBackground({ effect, data }: ThreeBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const managerRef = useRef<SceneManagerType | null>(null);
+  const effectRef = useRef(effect);
+  const dataRef = useRef(data);
+  effectRef.current = effect;
+  dataRef.current = data;
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    let manager: SceneManagerType;
-
     import('./scene-manager').then(({ SceneManager }) => {
       if (!canvasRef.current) return;
-      manager = new SceneManager(canvasRef.current);
+      const manager = new SceneManager(canvasRef.current);
       managerRef.current = manager;
-      applyEffect(manager, effect);
+      applyEffect(manager, effectRef.current);
+      manager.updateData(dataRef.current);
       manager.start();
     });
 

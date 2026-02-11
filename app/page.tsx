@@ -6,7 +6,6 @@ import { useMonthData } from '@/hooks/useMonthData';
 import { useSettings } from '@/hooks/useSettings';
 import { useOuraConnection } from '@/hooks/useOuraConnection';
 import DashboardHeader from '@/components/DashboardHeader';
-import ImportSection from '@/components/ImportSection';
 import SettingsPanel from '@/components/SettingsPanel';
 import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
@@ -111,6 +110,7 @@ export default function DashboardPage() {
         onOuraConnect={oura.startOAuth}
         onOuraDisconnect={oura.disconnect}
         onOuraFetch={(start, end) => oura.fetchData(start, end, handleDataImported)}
+        onDataImported={handleDataImported}
       />
 
       <div className="dashboard">
@@ -120,8 +120,6 @@ export default function DashboardPage() {
           onNext={monthData.nextMonth}
           onSettingsToggle={() => setSettingsOpen(o => !o)}
         />
-
-        <ImportSection onDataImported={handleDataImported} />
 
         {/* Sleep Section */}
         <section className="metric-section">

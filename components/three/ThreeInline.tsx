@@ -12,6 +12,8 @@ interface ThreeInlineProps {
 export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const managerRef = useRef<InlineSceneManagerType | null>(null);
+  const dataRef = useRef(data);
+  dataRef.current = data;
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -22,7 +24,7 @@ export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
       managerRef.current = manager;
       manager.setEffect(effectFactory());
       manager.start();
-      manager.updateData(data);
+      manager.updateData(dataRef.current);
     });
 
     return () => {

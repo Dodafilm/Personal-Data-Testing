@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const OAUTH_AUTHORIZE_URL = 'https://cloud.ouraring.com/oauth/authorize';
-const SCOPES = 'daily heartrate workout session personal';
+const SCOPES = 'daily sleep heartrate workout session personal';
 
 export async function GET(request: Request) {
   const clientId = process.env.OURA_CLIENT_ID;

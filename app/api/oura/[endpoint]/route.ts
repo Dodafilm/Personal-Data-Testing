@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 const BASE_URL = 'https://api.ouraring.com';
 
 const ENDPOINT_MAP: Record<string, string> = {
-  daily_sleep: '/v2/usercollection/daily_sleep',
+  daily_sleep: '/v2/usercollection/sleep',
   heartrate: '/v2/usercollection/heartrate',
   daily_activity: '/v2/usercollection/daily_activity',
 };

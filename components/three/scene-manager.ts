@@ -1,5 +1,14 @@
 import * as THREE from 'three';
 
+function isWebGLAvailable(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 export interface SceneEffect {
   init(scene: THREE.Scene, camera: THREE.PerspectiveCamera): void;
   update?(data: unknown[], elapsed: number): void;
@@ -18,6 +27,9 @@ export class SceneManager {
   private _onResize: () => void;
 
   constructor(canvas: HTMLCanvasElement) {
+    if (!isWebGLAvailable()) {
+      throw new Error('WebGL is not available — enable hardware acceleration in browser settings');
+    }
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -104,6 +116,9 @@ export class InlineSceneManager {
   private _resizeObserver: ResizeObserver;
 
   constructor(canvas: HTMLCanvasElement) {
+    if (!isWebGLAvailable()) {
+      throw new Error('WebGL is not available — enable hardware acceleration in browser settings');
+    }
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -158,9 +173,8 @@ export class InlineSceneManager {
 
   private _handleResize() {
     if (!this.canvas.parentElement) return;
-    const rect = this.canvas.parentElement.getBoundingClientRect();
-    const w = rect.width;
-    const h = this.canvas.clientHeight || 300;
+    const w = this.canvas.parentElement.getBoundingClientRect().width;
+    const h = 300;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);

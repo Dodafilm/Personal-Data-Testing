@@ -33,6 +33,8 @@ export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
         if (disposed || !canvasRef.current) return;
 
         const canvas = canvasRef.current;
+        const testCtx = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!testCtx) throw new Error('WebGL is not available');
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setClearColor(0x0f0f18, 1);
@@ -45,11 +47,11 @@ export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
         const clock = new THREE.Clock();
         let activeEffect: ReturnType<typeof effectFactory> | null = null;
 
+        const FIXED_HEIGHT = 300;
         const handleResize = () => {
           if (!canvas.parentElement) return;
-          const rect = canvas.parentElement.getBoundingClientRect();
-          const w = rect.width;
-          const h = canvas.clientHeight || 300;
+          const w = canvas.parentElement.getBoundingClientRect().width;
+          const h = FIXED_HEIGHT;
           camera.aspect = w / h;
           camera.updateProjectionMatrix();
           renderer.setSize(w, h);

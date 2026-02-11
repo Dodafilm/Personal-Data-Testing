@@ -19,7 +19,9 @@
       "Bash(findstr:*)",
       "Bash(if not exist \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\prisma\" mkdir \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\prisma\")",
       "Bash(npx prisma generate:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

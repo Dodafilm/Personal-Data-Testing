@@ -5,6 +5,12 @@ import type { Settings } from '@/lib/types';
 import { normalizeJson, normalizeCsv, parseCsvString } from '@/lib/data-adapter';
 import { saveDays } from '@/lib/store';
 
+function useOrigin() {
+  const [origin, setOrigin] = useState('');
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  return origin;
+}
+
 interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -38,6 +44,7 @@ export default function SettingsPanel({
   const [endDate, setEndDate] = useState('');
   const [importStatus, setImportStatus] = useState<{ text: string; type: string }>({ text: '', type: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const origin = useOrigin();
 
   useEffect(() => {
     if (!startDate || !endDate) {
@@ -87,7 +94,7 @@ export default function SettingsPanel({
       <div className={`settings-panel${open ? ' open' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <span className="version-label">v0.2.1</span>
+          <span className="version-label">v0.2.3</span>
           <button className="icon-btn" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">
@@ -136,7 +143,7 @@ export default function SettingsPanel({
                 Oura developer app
               </a>{' '}
               and active Oura Membership. Configure your app&apos;s redirect URL to{' '}
-              <code>{typeof window !== 'undefined' ? `${window.location.origin}/api/oura/callback` : '/api/oura/callback'}</code>
+              <code>{origin ? `${origin}/api/oura/callback` : '/api/oura/callback'}</code>
             </p>
 
             {isOuraConnected ? (

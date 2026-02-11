@@ -94,8 +94,8 @@ export default function ThreeInline({ data, effectFactory }: ThreeInlineProps) {
         mgr.updateData(dataRef.current);
 
       } catch (err) {
-        console.error('ThreeInline error:', err);
-        setError(String(err));
+        console.warn('ThreeInline: WebGL not available', err);
+        setError('WebGL unavailable');
       }
     })();
 

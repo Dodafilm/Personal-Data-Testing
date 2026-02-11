@@ -17,7 +17,7 @@ export class WaveSurface {
       color: 0x6c5ce7,
       wireframe: true,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.5,
       side: THREE.DoubleSide,
     });
 

@@ -39,10 +39,10 @@ export class ParticleField {
     this._velocities = velocities;
 
     const material = new THREE.PointsMaterial({
-      size: 1.5,
+      size: 2.5,
       vertexColors: true,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.85,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       sizeAttenuation: true,

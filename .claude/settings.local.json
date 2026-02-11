@@ -8,7 +8,8 @@
       "WebSearch",
       "WebFetch(domain:cloud.ouraring.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:wearipedia.readthedocs.io)"
+      "WebFetch(domain:wearipedia.readthedocs.io)",
+      "WebFetch(domain:developer.ouraring.com)"
     ]
   }
 }

@@ -20,11 +20,15 @@
     </div>
     <div class="settings-body">
       <div class="setting-group">
-        <h3>Oura API</h3>
-        <label for="oura-token">Personal Access Token</label>
-        <input type="password" id="oura-token" placeholder="Paste your Oura token">
-        <label for="cors-proxy">CORS Proxy URL (optional)</label>
-        <input type="text" id="cors-proxy" placeholder="https://cors-proxy.example.com/">
+        <h3>Oura Ring</h3>
+        <p class="setting-hint">Requires an <a href="https://cloud.ouraring.com/oauth/applications" target="_blank">Oura developer app</a> and active Oura Membership.</p>
+        <label for="oura-client-id">Client ID</label>
+        <input type="text" id="oura-client-id" placeholder="Your Oura app Client ID">
+        <div id="oura-connected" class="connected-badge" style="display:none">
+          <span class="connected-dot"></span>
+          <span>Connected to Oura</span>
+        </div>
+        <button id="connect-oura" class="btn btn-primary">Connect Oura Ring</button>
         <div class="setting-row">
           <label for="fetch-start">Date Range</label>
           <div class="date-range">
@@ -33,7 +37,8 @@
             <input type="date" id="fetch-end">
           </div>
         </div>
-        <button id="fetch-oura" class="btn btn-primary">Fetch Oura Data</button>
+        <button id="fetch-oura" class="btn btn-primary" style="display:none">Fetch Data</button>
+        <button id="disconnect-oura" class="btn btn-danger" style="display:none">Disconnect</button>
         <div id="fetch-status" class="status-msg"></div>
       </div>
       <div class="setting-group">

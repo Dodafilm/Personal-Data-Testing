@@ -2,9 +2,60 @@ import { normalizeOuraSleep, normalizeOuraHeartRate, normalizeOuraActivity } fro
 import { saveDays, saveSettings, loadSettings } from './store.js';
 
 const BASE_URL = 'https://api.ouraring.com';
+const OAUTH_AUTHORIZE_URL = 'https://cloud.ouraring.com/oauth/authorize';
+const SCOPES = 'daily heartrate workout session personal';
 
-export async function fetchOuraData(token, startDate, endDate, proxyUrl = '') {
-  if (!token) throw new Error('No Oura API token provided');
+// ===== OAuth2 Client-Side Flow =====
+
+export function startOuraOAuth(clientId, redirectUri) {
+  const state = crypto.randomUUID();
+  saveSettings({ oauthState: state });
+
+  const params = new URLSearchParams({
+    response_type: 'token',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: SCOPES,
+    state: state,
+  });
+
+  window.location.href = `${OAUTH_AUTHORIZE_URL}?${params}`;
+}
+
+export function handleOAuthCallback() {
+  // Check for access_token in URL hash (client-side OAuth2 flow)
+  const hash = window.location.hash.substring(1);
+  if (!hash) return false;
+
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const state = params.get('state');
+
+  if (!accessToken) return false;
+
+  // Verify state parameter
+  const settings = loadSettings();
+  if (settings.oauthState && state !== settings.oauthState) {
+    console.error('OAuth state mismatch');
+    return false;
+  }
+
+  // Save the token and clean up URL
+  saveSettings({
+    ouraToken: accessToken,
+    oauthState: null,
+  });
+
+  // Remove hash from URL
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  return true;
+}
+
+// ===== API Fetching =====
+
+export async function fetchOuraData(token, startDate, endDate) {
+  if (!token) throw new Error('Not connected to Oura. Click "Connect Oura Ring" first.');
   if (!startDate || !endDate) throw new Error('Start and end dates are required');
 
   const results = { sleep: [], heart: [], workout: [], errors: [] };
@@ -17,7 +68,7 @@ export async function fetchOuraData(token, startDate, endDate, proxyUrl = '') {
 
   for (const ep of endpoints) {
     try {
-      const data = await fetchEndpoint(token, ep.path, startDate, endDate, proxyUrl);
+      const data = await fetchEndpoint(token, ep.path, startDate, endDate);
       const normalized = ep.normalize(data);
       results[ep.key] = normalized;
       saveDays(normalized);
@@ -29,16 +80,21 @@ export async function fetchOuraData(token, startDate, endDate, proxyUrl = '') {
   return results;
 }
 
-async function fetchEndpoint(token, path, startDate, endDate, proxyUrl) {
+async function fetchEndpoint(token, path, startDate, endDate) {
   const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
   const url = `${BASE_URL}${path}?${params}`;
-  const fetchUrl = proxyUrl ? `${proxyUrl.replace(/\/+$/, '')}/${url}` : url;
 
-  const response = await fetch(fetchUrl, {
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
+
+  if (response.status === 401) {
+    // Token expired or invalid — clear it
+    saveSettings({ ouraToken: null });
+    throw new Error('Token expired. Please reconnect your Oura Ring.');
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -48,17 +104,25 @@ async function fetchEndpoint(token, path, startDate, endDate, proxyUrl) {
   return response.json();
 }
 
+// ===== UI Init =====
+
 export function initOuraSettings() {
   const settings = loadSettings();
-  const tokenInput = document.getElementById('oura-token');
-  const proxyInput = document.getElementById('cors-proxy');
+  const clientIdInput = document.getElementById('oura-client-id');
   const startInput = document.getElementById('fetch-start');
   const endInput = document.getElementById('fetch-end');
+  const connectBtn = document.getElementById('connect-oura');
   const fetchBtn = document.getElementById('fetch-oura');
+  const disconnectBtn = document.getElementById('disconnect-oura');
   const statusEl = document.getElementById('fetch-status');
+  const connectedInfo = document.getElementById('oura-connected');
 
-  if (settings.ouraToken) tokenInput.value = settings.ouraToken;
-  if (settings.corsProxy) proxyInput.value = settings.corsProxy;
+  // Check for OAuth callback on page load
+  const justConnected = handleOAuthCallback();
+  const reloadedSettings = loadSettings();
+
+  // Restore client ID
+  if (reloadedSettings.ouraClientId) clientIdInput.value = reloadedSettings.ouraClientId;
 
   // Default date range: last 30 days
   const end = new Date();
@@ -67,14 +131,36 @@ export function initOuraSettings() {
   startInput.value = startInput.value || formatDate(start);
   endInput.value = endInput.value || formatDate(end);
 
-  fetchBtn.addEventListener('click', async () => {
-    const token = tokenInput.value.trim();
-    const proxy = proxyInput.value.trim();
+  // Show connected/disconnected state
+  updateConnectionUI(reloadedSettings);
 
-    saveSettings({ ouraToken: token, corsProxy: proxy });
+  if (justConnected) {
+    statusEl.textContent = 'Connected to Oura! Click "Fetch Data" to import.';
+    statusEl.className = 'status-msg success';
+  }
+
+  // Connect button — starts OAuth flow
+  connectBtn.addEventListener('click', () => {
+    const clientId = clientIdInput.value.trim();
+    if (!clientId) {
+      statusEl.textContent = 'Enter your Client ID first (from Oura developer portal)';
+      statusEl.className = 'status-msg error';
+      return;
+    }
+    saveSettings({ ouraClientId: clientId });
+
+    // Redirect URI = current page
+    const redirectUri = window.location.origin + window.location.pathname;
+    startOuraOAuth(clientId, redirectUri);
+  });
+
+  // Fetch button — uses stored access token
+  fetchBtn.addEventListener('click', async () => {
+    const currentSettings = loadSettings();
+    const token = currentSettings.ouraToken;
 
     if (!token) {
-      statusEl.textContent = 'Please enter your Oura token';
+      statusEl.textContent = 'Not connected. Click "Connect Oura Ring" first.';
       statusEl.className = 'status-msg error';
       return;
     }
@@ -83,22 +169,40 @@ export function initOuraSettings() {
     statusEl.className = 'status-msg loading';
 
     try {
-      const results = await fetchOuraData(token, startInput.value, endInput.value, proxy);
+      const results = await fetchOuraData(token, startInput.value, endInput.value);
       const total = results.sleep.length + results.heart.length + results.workout.length;
       let msg = `Imported ${total} records`;
       if (results.errors.length > 0) {
-        msg += ` (${results.errors.length} endpoint(s) failed)`;
+        msg += ` (${results.errors.length} endpoint(s) failed: ${results.errors.map(e => e.error).join('; ')})`;
       }
       statusEl.textContent = msg;
-      statusEl.className = 'status-msg success';
+      statusEl.className = total > 0 ? 'status-msg success' : 'status-msg error';
 
-      // Dispatch event so the dashboard can refresh
       window.dispatchEvent(new CustomEvent('data-updated'));
     } catch (err) {
       statusEl.textContent = `Error: ${err.message}`;
       statusEl.className = 'status-msg error';
+      updateConnectionUI(loadSettings());
     }
   });
+
+  // Disconnect button
+  disconnectBtn.addEventListener('click', () => {
+    saveSettings({ ouraToken: null });
+    statusEl.textContent = 'Disconnected from Oura.';
+    statusEl.className = 'status-msg';
+    updateConnectionUI(loadSettings());
+  });
+
+  function updateConnectionUI(s) {
+    const isConnected = !!s.ouraToken;
+    connectedInfo.style.display = isConnected ? 'flex' : 'none';
+    connectBtn.style.display = isConnected ? 'none' : '';
+    clientIdInput.style.display = isConnected ? 'none' : '';
+    document.querySelector('label[for="oura-client-id"]').style.display = isConnected ? 'none' : '';
+    fetchBtn.style.display = isConnected ? '' : 'none';
+    disconnectBtn.style.display = isConnected ? '' : 'none';
+  }
 }
 
 function formatDate(d) {

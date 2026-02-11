@@ -203,6 +203,48 @@ body {
   margin-bottom: 32px;
 }
 
+.setting-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.setting-hint a {
+  color: var(--accent-secondary);
+  text-decoration: none;
+}
+
+.setting-hint a:hover {
+  text-decoration: underline;
+}
+
+.connected-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(85, 239, 196, 0.1);
+  border: 1px solid rgba(85, 239, 196, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--accent-workout);
+  margin: 12px 0;
+}
+
+.connected-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-workout);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .setting-group h3 {
   font-size: 0.9rem;
   color: var(--text-secondary);

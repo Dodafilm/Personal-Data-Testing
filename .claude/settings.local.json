@@ -21,7 +21,8 @@
       "Bash(npx prisma generate:*)",
       "Bash(npx tsc:*)",
       "Bash(npm uninstall:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "WebFetch(domain:vercel.com)"
     ]
   }
 }

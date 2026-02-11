@@ -26,6 +26,9 @@ export interface SleepData {
   light_min: number;
   awake_min: number;
   readiness_score: number;
+  phases_5min?: string;
+  bedtime_start?: string;
+  bedtime_end?: string;
 }
 
 export interface HeartData {
@@ -33,6 +36,7 @@ export interface HeartData {
   hrv_avg: number;
   hr_min: number;
   hr_max: number;
+  samples?: { ts: string; bpm: number }[];
 }
 
 export interface WorkoutData {
@@ -40,6 +44,9 @@ export interface WorkoutData {
   calories_active: number;
   steps: number;
   active_min: number;
+  class_5min?: string;
+  met_items?: number[];
+  met_timestamp?: string;
 }
 
 export interface StressData {

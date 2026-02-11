@@ -23,7 +23,8 @@
       "Bash(npm uninstall:*)",
       "Bash(node -e:*)",
       "WebFetch(domain:vercel.com)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "WebFetch(domain:jsr.io)"
     ]
   }
 }

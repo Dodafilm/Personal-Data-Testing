@@ -13,18 +13,26 @@ export function normalizeOuraSleep(apiData: { data?: Array<Record<string, unknow
       light_min: Math.round(((item.light_sleep_duration as number) || 0) / 60),
       awake_min: Math.round(((item.awake_time as number) || 0) / 60),
       readiness_score: ((item.readiness as { score?: number })?.score || (item.score as number)) || 0,
+      phases_5min: (item.sleep_phase_5_min as string) || undefined,
+      bedtime_start: (item.bedtime_start as string) || undefined,
+      bedtime_end: (item.bedtime_end as string) || undefined,
     },
   }));
 }
 
 export function normalizeOuraHeartRate(apiData: { data?: Array<Record<string, unknown>> }): DayRecord[] {
   if (!apiData || !apiData.data) return [];
-  const byDay: Record<string, { bpms: number[]; hrv: number[] }> = {};
+  const byDay: Record<string, { bpms: number[]; hrv: number[]; samples: { ts: string; bpm: number }[] }> = {};
   for (const item of apiData.data) {
     const day = (item.day as string) || ((item.timestamp as string) ? (item.timestamp as string).slice(0, 10) : null);
     if (!day) continue;
-    if (!byDay[day]) byDay[day] = { bpms: [], hrv: [] };
-    if (item.bpm != null) byDay[day].bpms.push(item.bpm as number);
+    if (!byDay[day]) byDay[day] = { bpms: [], hrv: [], samples: [] };
+    if (item.bpm != null) {
+      byDay[day].bpms.push(item.bpm as number);
+      if (item.timestamp) {
+        byDay[day].samples.push({ ts: item.timestamp as string, bpm: item.bpm as number });
+      }
+    }
     if (item.hrv != null) byDay[day].hrv.push(item.hrv as number);
   }
   return Object.entries(byDay).map(([date, vals]) => ({
@@ -35,6 +43,7 @@ export function normalizeOuraHeartRate(apiData: { data?: Array<Record<string, un
       hrv_avg: vals.hrv.length ? Math.round(avg(vals.hrv)) : 0,
       hr_min: vals.bpms.length ? Math.min(...vals.bpms) : 0,
       hr_max: vals.bpms.length ? Math.max(...vals.bpms) : 0,
+      samples: vals.samples.length ? vals.samples : undefined,
     },
   }));
 }
@@ -49,6 +58,9 @@ export function normalizeOuraActivity(apiData: { data?: Array<Record<string, unk
       calories_active: (item.active_calories as number) || 0,
       steps: (item.steps as number) || 0,
       active_min: Math.round(((item.high_activity_time as number) || 0 + ((item.medium_activity_time as number) || 0)) / 60),
+      class_5min: (item.class_5_min as string) || undefined,
+      met_items: downsampleMet(item.met),
+      met_timestamp: (item.met as { timestamp?: string })?.timestamp || undefined,
     },
   }));
 }
@@ -152,6 +164,20 @@ function parseCsvLine(line: string): string[] {
     current += ch;
   }
   result.push(current.trim());
+  return result;
+}
+
+function downsampleMet(met: unknown): number[] | undefined {
+  const obj = met as { interval?: number; items?: number[]; timestamp?: string } | null;
+  if (!obj || !obj.items || !obj.items.length) return undefined;
+  const interval = obj.interval || 60;
+  if (interval >= 300) return obj.items; // already 5-min or coarser
+  const bucketSize = Math.round(300 / interval); // samples per 5-min bucket
+  const result: number[] = [];
+  for (let i = 0; i < obj.items.length; i += bucketSize) {
+    const slice = obj.items.slice(i, i + bucketSize);
+    result.push(slice.reduce((s, v) => s + v, 0) / slice.length);
+  }
   return result;
 }
 

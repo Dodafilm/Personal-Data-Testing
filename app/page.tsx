@@ -16,6 +16,9 @@ import StressCharts from '@/components/charts/StressCharts';
 import SleepHeatmap from '@/components/charts/SleepHeatmap';
 import MetricHeatmap from '@/components/charts/MetricHeatmap';
 import CalendarDayPicker from '@/components/CalendarDayPicker';
+import SleepOverlay from '@/components/charts/SleepOverlay';
+import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
+import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
 import type { DayRecord } from '@/lib/types';
@@ -163,12 +166,14 @@ export default function DashboardPage() {
           <h2 className="section-title sleep">Sleep</h2>
           <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
           <SleepHeatmap data={filteredData} />
+          <SleepOverlay data={monthData.data} />
         </section>
 
         {/* Heart Rate Section */}
         <section className="metric-section">
           <h2 className="section-title heart">Heart Rate</h2>
           <HeartCharts data={monthData.data} onDayClick={setSelectedDay} />
+          <HeartRateOverlay data={monthData.data} />
         </section>
 
         {/* Workout Section */}
@@ -176,6 +181,7 @@ export default function DashboardPage() {
           <h2 className="section-title workout">Workouts &amp; Activity</h2>
           <WorkoutCharts data={monthData.data} onDayClick={setSelectedDay} />
           <MetricHeatmap data={filteredData} />
+          <ActivityOverlay data={monthData.data} />
         </section>
 
         {/* Stress Section */}

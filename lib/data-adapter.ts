@@ -2,22 +2,37 @@ import type { DayRecord } from './types';
 
 export function normalizeOuraSleep(apiData: { data?: Array<Record<string, unknown>> }): DayRecord[] {
   if (!apiData || !apiData.data) return [];
-  return apiData.data.map(item => ({
-    date: item.day as string,
-    source: 'oura',
-    sleep: {
-      duration_hours: round(((item.total_sleep_duration as number) || 0) / 3600, 1),
-      efficiency: (item.efficiency as number) || 0,
-      deep_min: Math.round(((item.deep_sleep_duration as number) || 0) / 60),
-      rem_min: Math.round(((item.rem_sleep_duration as number) || 0) / 60),
-      light_min: Math.round(((item.light_sleep_duration as number) || 0) / 60),
-      awake_min: Math.round(((item.awake_time as number) || 0) / 60),
-      readiness_score: ((item.readiness as { score?: number })?.score || (item.score as number)) || 0,
-      phases_5min: (item.sleep_phase_5_min as string) || undefined,
-      bedtime_start: (item.bedtime_start as string) || undefined,
-      bedtime_end: (item.bedtime_end as string) || undefined,
-    },
-  }));
+  return apiData.data.map(item => {
+    // Detect format: detailed /sleep has total_sleep_duration, daily_sleep has contributors
+    const isDetailed = item.total_sleep_duration != null;
+    const contributors = item.contributors as Record<string, number> | undefined;
+
+    return {
+      date: item.day as string,
+      source: 'oura',
+      sleep: isDetailed ? {
+        duration_hours: round(((item.total_sleep_duration as number) || 0) / 3600, 1),
+        efficiency: (item.efficiency as number) || 0,
+        deep_min: Math.round(((item.deep_sleep_duration as number) || 0) / 60),
+        rem_min: Math.round(((item.rem_sleep_duration as number) || 0) / 60),
+        light_min: Math.round(((item.light_sleep_duration as number) || 0) / 60),
+        awake_min: Math.round(((item.awake_time as number) || 0) / 60),
+        readiness_score: ((item.readiness as { score?: number })?.score || (item.score as number)) || 0,
+        phases_5min: (item.sleep_phase_5_min as string) || undefined,
+        bedtime_start: (item.bedtime_start as string) || undefined,
+        bedtime_end: (item.bedtime_end as string) || undefined,
+      } : {
+        // daily_sleep format: scores only (0-100), no raw durations
+        duration_hours: 0,
+        efficiency: contributors?.efficiency || 0,
+        deep_min: 0,
+        rem_min: 0,
+        light_min: 0,
+        awake_min: 0,
+        readiness_score: (item.score as number) || 0,
+      },
+    };
+  });
 }
 
 export function normalizeOuraHeartRate(apiData: { data?: Array<Record<string, unknown>> }): DayRecord[] {
@@ -133,7 +148,7 @@ export function normalizeJson(data: unknown): DayRecord[] {
   if (obj && obj.data && Array.isArray(obj.data)) {
     const first = obj.data[0] as Record<string, unknown> | undefined;
     if (first) {
-      if (first.total_sleep_duration != null) return normalizeOuraSleep(obj as { data: Array<Record<string, unknown>> });
+      if (first.total_sleep_duration != null || (first.contributors != null && first.score != null)) return normalizeOuraSleep(obj as { data: Array<Record<string, unknown>> });
       if (first.bpm != null) return normalizeOuraHeartRate(obj as { data: Array<Record<string, unknown>> });
       if (first.steps != null || first.active_calories != null) return normalizeOuraActivity(obj as { data: Array<Record<string, unknown>> });
       if (first.stress_high != null || first.day_summary != null) return normalizeOuraStress(obj as { data: Array<Record<string, unknown>> });

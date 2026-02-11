@@ -1,4 +1,8 @@
-import { auth } from '@/lib/auth';
+import NextAuth from 'next-auth';
+import authConfig from '@/lib/auth.config';
+
+// Use lightweight config — no Prisma/bcrypt imports to stay under Edge 1MB limit
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -11,6 +15,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  // Run middleware on auth pages only — dashboard is accessible without auth
   matcher: ['/login', '/signup'],
 };

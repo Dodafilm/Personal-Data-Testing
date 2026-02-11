@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const TOKEN_URL = 'https://api.ouraring.com/oauth/token';
 
@@ -53,9 +55,29 @@ export async function GET(request: Request) {
 
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
+    const refreshToken = tokenData.refresh_token ?? null;
     const expiresIn = tokenData.expires_in || 86400;
 
-    // Set httpOnly cookie with the access token
+    // Store tokens in DB for authenticated users
+    const session = await auth();
+    if (session?.user?.id) {
+      await prisma.userSettings.upsert({
+        where: { userId: session.user.id },
+        create: {
+          userId: session.user.id,
+          ouraAccessToken: accessToken,
+          ouraRefreshToken: refreshToken,
+          ouraTokenExpiry: new Date(Date.now() + expiresIn * 1000),
+        },
+        update: {
+          ouraAccessToken: accessToken,
+          ouraRefreshToken: refreshToken,
+          ouraTokenExpiry: new Date(Date.now() + expiresIn * 1000),
+        },
+      });
+    }
+
+    // Always set httpOnly cookie (works for both auth and anon users)
     const response = NextResponse.redirect(`${url.origin}?oura_connected=true`);
     response.cookies.set('oura_token', accessToken, {
       httpOnly: true,
@@ -64,7 +86,6 @@ export async function GET(request: Request) {
       maxAge: expiresIn,
       path: '/',
     });
-    // Clear the state cookie
     response.cookies.delete('oura_oauth_state');
 
     return response;

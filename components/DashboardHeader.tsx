@@ -1,5 +1,7 @@
 'use client';
 
+import UserMenu from './UserMenu';
+
 interface DashboardHeaderProps {
   label: string;
   onPrev: () => void;
@@ -16,7 +18,10 @@ export default function DashboardHeader({ label, onPrev, onNext, onSettingsToggl
         <span className="month-label">{label}</span>
         <button className="icon-btn" aria-label="Next month" onClick={onNext}>&rarr;</button>
       </div>
-      <button className="icon-btn" aria-label="Settings" onClick={onSettingsToggle}>&#9881;</button>
+      <div className="header-actions">
+        <button className="icon-btn" aria-label="Settings" onClick={onSettingsToggle}>&#9881;</button>
+        <UserMenu />
+      </div>
     </header>
   );
 }

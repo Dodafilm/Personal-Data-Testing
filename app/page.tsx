@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { saveDays, getMonthData, clearAllData } from '@/lib/store';
+import { useSession } from 'next-auth/react';
+import { useStore } from '@/lib/store-provider';
 import { useMonthData } from '@/hooks/useMonthData';
 import { useSettings } from '@/hooks/useSettings';
 import { useOuraConnection } from '@/hooks/useOuraConnection';
@@ -11,6 +12,7 @@ import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import WorkoutCharts from '@/components/charts/WorkoutCharts';
 import ComingSoon from '@/components/ComingSoon';
+import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
 import type { DayRecord } from '@/lib/types';
 import { SleepTerrain } from '@/components/three/data-viz/sleep-terrain';
@@ -20,21 +22,27 @@ const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground
 const ThreeInline = dynamic(() => import('@/components/three/ThreeInline'), { ssr: false });
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const store = useStore();
   const monthData = useMonthData(2026, 1);
   const { settings, updateSettings } = useSettings();
   const oura = useOuraConnection();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [bgEffect, setBgEffect] = useState('particles');
 
-  // Load sample data on first run, then refresh
+  // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
     async function init() {
-      const existing = getMonthData(2026, 1);
-      if (existing.length === 0) {
+      const result = store.getMonthData(2026, 1);
+      const existing = result instanceof Promise ? await result : result;
+
+      // Only load sample data for anonymous users with no data
+      if (existing.length === 0 && !session?.user) {
         try {
           const res = await fetch('/data/sample-data.json');
           const sampleData: DayRecord[] = await res.json();
-          saveDays(sampleData);
+          const saveResult = store.saveDays(sampleData);
+          if (saveResult instanceof Promise) await saveResult;
           monthData.setYear(2026);
           monthData.setMonth(1);
         } catch (err) {
@@ -45,7 +53,7 @@ export default function DashboardPage() {
     }
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session?.user, store]);
 
   // Refresh data when month changes
   useEffect(() => {
@@ -81,10 +89,11 @@ export default function DashboardPage() {
     updateSettings({ bgEffect: effect });
   }, [updateSettings]);
 
-  const handleClearData = useCallback(() => {
-    clearAllData();
+  const handleClearData = useCallback(async () => {
+    const result = store.clearAllData();
+    if (result instanceof Promise) await result;
     monthData.refresh();
-  }, [monthData]);
+  }, [store, monthData]);
 
   const handleDataImported = useCallback(() => {
     monthData.refresh();
@@ -120,6 +129,8 @@ export default function DashboardPage() {
           onNext={monthData.nextMonth}
           onSettingsToggle={() => setSettingsOpen(o => !o)}
         />
+
+        <SyncPrompt />
 
         {/* Sleep Section */}
         <section className="metric-section">

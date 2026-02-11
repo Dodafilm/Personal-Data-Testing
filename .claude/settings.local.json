@@ -14,7 +14,12 @@
       "Bash(ls -la \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\js\\\\three\"\" 2>nul || ls -la \"/mnt/c/TD_Applications/Personal-Data-Testing/js/three/ \")",
       "Bash(npx create-next-app:*)",
       "Bash(npm install:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npm view:*)",
+      "Bash(findstr:*)",
+      "Bash(if not exist \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\prisma\" mkdir \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\prisma\")",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

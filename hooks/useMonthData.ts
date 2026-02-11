@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { getMonthData } from '@/lib/store';
+import { useStore } from '@/lib/store-provider';
 import type { DayRecord } from '@/lib/types';
 
 const MONTHS = [
@@ -10,13 +10,16 @@ const MONTHS = [
 ];
 
 export function useMonthData(initialYear?: number, initialMonth?: number) {
+  const store = useStore();
   const [year, setYear] = useState(initialYear ?? new Date().getFullYear());
   const [month, setMonth] = useState(initialMonth ?? new Date().getMonth() + 1);
   const [data, setData] = useState<DayRecord[]>([]);
 
-  const refresh = useCallback(() => {
-    setData(getMonthData(year, month));
-  }, [year, month]);
+  const refresh = useCallback(async () => {
+    const result = store.getMonthData(year, month);
+    const resolved = result instanceof Promise ? await result : result;
+    setData(resolved);
+  }, [year, month, store]);
 
   const prevMonth = useCallback(() => {
     setMonth(prev => {

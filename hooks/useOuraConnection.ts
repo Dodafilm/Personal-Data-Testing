@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { saveDays } from '@/lib/store';
+import { useStore } from '@/lib/store-provider';
 import { normalizeOuraSleep, normalizeOuraHeartRate, normalizeOuraActivity } from '@/lib/data-adapter';
 
 interface FetchResult {
@@ -12,6 +12,7 @@ interface FetchResult {
 }
 
 export function useOuraConnection() {
+  const store = useStore();
   const [isConnected, setIsConnected] = useState(false);
   const [status, setStatus] = useState<{ text: string; type: '' | 'success' | 'error' | 'loading' }>({ text: '', type: '' });
 
@@ -22,7 +23,6 @@ export function useOuraConnection() {
   const checkConnection = useCallback(async () => {
     try {
       const res = await fetch('/api/oura/daily_sleep?start_date=2000-01-01&end_date=2000-01-01');
-      // If we get 401, not connected. Anything else means the cookie exists.
       setIsConnected(res.status !== 401);
     } catch {
       setIsConnected(false);
@@ -30,9 +30,6 @@ export function useOuraConnection() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    // Clear the httpOnly cookie by calling a simple endpoint or just setting it expired
-    // For now, we'll just tell the user — the cookie is httpOnly so we can't clear it from JS
-    // A proper logout would need a server route, but for MVP we can use the authorize route to re-auth
     setIsConnected(false);
     setStatus({ text: 'Disconnected. Refresh and reconnect when ready.', type: '' });
   }, []);
@@ -62,7 +59,9 @@ export function useOuraConnection() {
         }
         const data = await res.json();
         const normalized = ep.normalize(data);
-        saveDays(normalized);
+        // Route through store context (local or cloud)
+        const saveResult = store.saveDays(normalized);
+        if (saveResult instanceof Promise) await saveResult;
         result[ep.key] = normalized.length;
       } catch (err) {
         result.errors.push((err as Error).message);
@@ -76,7 +75,7 @@ export function useOuraConnection() {
     }
     setStatus({ text: msg, type: total > 0 ? 'success' : 'error' });
     onDataImported();
-  }, []);
+  }, [store]);
 
   return { isConnected, status, startOAuth, checkConnection, disconnect, fetchData, setIsConnected, setStatus };
 }

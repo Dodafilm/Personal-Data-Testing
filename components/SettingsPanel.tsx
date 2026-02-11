@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import type { Settings } from '@/lib/types';
 import { normalizeJson, normalizeCsv, parseCsvString } from '@/lib/data-adapter';
-import { saveDays } from '@/lib/store';
+import { useStore } from '@/lib/store-provider';
 
 function useOrigin() {
   const [origin, setOrigin] = useState('');
@@ -45,6 +46,8 @@ export default function SettingsPanel({
   const [importStatus, setImportStatus] = useState<{ text: string; type: string }>({ text: '', type: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const origin = useOrigin();
+  const { data: session } = useSession();
+  const store = useStore();
 
   useEffect(() => {
     if (!startDate || !endDate) {
@@ -66,7 +69,8 @@ export default function SettingsPanel({
       try {
         const text = await readFile(file);
         const days = parseFileContent(file.name, text);
-        saveDays(days);
+        const result = store.saveDays(days);
+        if (result instanceof Promise) await result;
         totalImported += days.length;
       } catch (err) {
         console.error(`Error importing ${file.name}:`, err);
@@ -94,10 +98,46 @@ export default function SettingsPanel({
       <div className={`settings-panel${open ? ' open' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <span className="version-label">v0.2.3</span>
+          <span className="version-label">v0.3.0</span>
           <button className="icon-btn" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">
+          {/* Account */}
+          <div className="setting-group">
+            <h3>Account</h3>
+            {session?.user ? (
+              <div className="account-info">
+                <div className="account-detail">
+                  <span className="account-label">Signed in as</span>
+                  <span className="account-value">{session.user.email}</span>
+                </div>
+                {session.user.name && (
+                  <div className="account-detail">
+                    <span className="account-label">Name</span>
+                    <span className="account-value">{session.user.name}</span>
+                  </div>
+                )}
+                <div className="account-detail">
+                  <span className="account-label">Storage</span>
+                  <span className="account-value account-cloud">Cloud (synced)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="account-info">
+                <p className="setting-hint">
+                  Sign in to sync your data across devices and keep a cloud backup.
+                </p>
+                <div className="account-detail">
+                  <span className="account-label">Storage</span>
+                  <span className="account-value">Local (this browser only)</span>
+                </div>
+                <a href="/login" className="btn btn-primary" style={{ marginTop: 12, textDecoration: 'none', textAlign: 'center' }}>
+                  Sign In / Create Account
+                </a>
+              </div>
+            )}
+          </div>
+
           {/* Import Data */}
           <div className="setting-group">
             <h3>Import Data</h3>

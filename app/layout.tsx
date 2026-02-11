@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { SessionProvider } from "next-auth/react";
+import { StoreProvider } from "@/lib/store-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SessionProvider>
+          <StoreProvider>
+            {children}
+          </StoreProvider>
+        </SessionProvider>
+      </body>
     </html>
   );
 }

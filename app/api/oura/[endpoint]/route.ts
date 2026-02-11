@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const BASE_URL = 'https://api.ouraring.com';
 
@@ -18,9 +20,29 @@ export async function GET(
     return NextResponse.json({ error: `Unknown endpoint: ${endpoint}` }, { status: 404 });
   }
 
-  // Read token from httpOnly cookie
-  const cookies = request.headers.get('cookie') || '';
-  const token = parseCookie(cookies, 'oura_token');
+  // Try DB token first (for authenticated users), then cookie fallback
+  let token: string | null = null;
+
+  const session = await auth();
+  if (session?.user?.id) {
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId: session.user.id },
+      select: { ouraAccessToken: true, ouraTokenExpiry: true },
+    });
+    if (settings?.ouraAccessToken) {
+      // Check if token is still valid
+      if (!settings.ouraTokenExpiry || settings.ouraTokenExpiry > new Date()) {
+        token = settings.ouraAccessToken;
+      }
+    }
+  }
+
+  // Fallback to cookie
+  if (!token) {
+    const cookies = request.headers.get('cookie') || '';
+    token = parseCookie(cookies, 'oura_token');
+  }
+
   if (!token) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
@@ -41,7 +63,13 @@ export async function GET(
     });
 
     if (apiRes.status === 401) {
-      // Token expired — clear cookie
+      // Token expired — clear cookie and DB token
+      if (session?.user?.id) {
+        await prisma.userSettings.update({
+          where: { userId: session.user.id },
+          data: { ouraAccessToken: null, ouraRefreshToken: null, ouraTokenExpiry: null },
+        });
+      }
       const response = NextResponse.json({ error: 'Token expired' }, { status: 401 });
       response.cookies.delete('oura_token');
       return response;

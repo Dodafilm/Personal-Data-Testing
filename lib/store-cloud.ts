@@ -1,0 +1,62 @@
+import type { DayRecord, Settings } from './types';
+
+// Cloud store: async functions that call /api/health/* routes
+
+export async function cloudSaveDay(day: DayRecord): Promise<void> {
+  await fetch('/api/health/records', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(day),
+  });
+}
+
+export async function cloudSaveDays(days: DayRecord[]): Promise<void> {
+  await fetch('/api/health/records', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ records: days }),
+  });
+}
+
+export async function cloudGetMonthData(year: number, month: number): Promise<DayRecord[]> {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const res = await fetch(`/api/health/records?start=${start}&end=${end}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function cloudGetAllDates(): Promise<string[]> {
+  const res = await fetch('/api/health/records?dates_only=true');
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function cloudClearAllData(): Promise<void> {
+  await fetch('/api/health/records', { method: 'DELETE' });
+}
+
+export async function cloudLoadSettings(): Promise<Settings> {
+  const res = await fetch('/api/health/settings');
+  if (!res.ok) return {};
+  return res.json();
+}
+
+export async function cloudSaveSettings(patch: Partial<Settings>): Promise<void> {
+  await fetch('/api/health/settings', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function cloudSyncFromLocal(records: DayRecord[]): Promise<{ synced: number }> {
+  const res = await fetch('/api/health/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ records }),
+  });
+  if (!res.ok) throw new Error('Sync failed');
+  return res.json();
+}

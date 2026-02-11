@@ -9,7 +9,12 @@
       "WebFetch(domain:cloud.ouraring.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:wearipedia.readthedocs.io)",
-      "WebFetch(domain:developer.ouraring.com)"
+      "WebFetch(domain:developer.ouraring.com)",
+      "Bash(dir:*)",
+      "Bash(ls -la \"C:\\\\TD_Applications\\\\Personal-Data-Testing\\\\js\\\\three\"\" 2>nul || ls -la \"/mnt/c/TD_Applications/Personal-Data-Testing/js/three/ \")",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

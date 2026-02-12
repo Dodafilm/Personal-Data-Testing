@@ -33,17 +33,18 @@ export function normalizeOuraSleep(apiData: { data?: Array<Record<string, unknow
       },
     };
 
-    // Detailed sleep periods include heart rate & HRV aggregates
+    // Detailed sleep periods include heart rate & HRV aggregates.
+    // Only set fields sleep data can accurately provide — hr_max
+    // comes from the heartrate endpoint, not sleep.
     if (isDetailed) {
-      const avgHr = item.average_heart_rate as number | undefined;
       const lowestHr = item.lowest_heart_rate as number | undefined;
       const avgHrv = item.average_hrv as number | undefined;
-      if (avgHr || lowestHr || avgHrv) {
+      if (lowestHr || avgHrv) {
         record.heart = {
-          resting_hr: lowestHr || avgHr || 0,
+          resting_hr: lowestHr || 0,
           hrv_avg: avgHrv || 0,
           hr_min: lowestHr || 0,
-          hr_max: avgHr || 0,
+          hr_max: 0,
         };
       }
     }

@@ -59,6 +59,7 @@ export async function GET(request: Request) {
 
 // Shallow-merge two JSON objects: incoming fields overwrite existing,
 // but existing fields not present in incoming are preserved.
+// Falsy primitives (0, '', null) in incoming do NOT overwrite truthy existing values.
 function mergeJson(
   existing: Prisma.InputJsonValue | null | undefined,
   incoming: unknown,
@@ -67,8 +68,17 @@ function mergeJson(
   if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
     return incoming as Prisma.InputJsonValue;
   }
-  // Spread existing under incoming so incoming wins but existing keys are kept
-  return { ...(existing as Record<string, unknown>), ...(incoming as Record<string, unknown>) } as Prisma.InputJsonValue;
+  const ex = existing as Record<string, unknown>;
+  const inc = incoming as Record<string, unknown>;
+  const result = { ...ex };
+  for (const key of Object.keys(inc)) {
+    const val = inc[key];
+    // Only overwrite if incoming value is truthy, or existing has no value
+    if (val || !(key in ex) || !ex[key]) {
+      result[key] = val;
+    }
+  }
+  return result as Prisma.InputJsonValue;
 }
 
 // Merge incoming data with existing record so we never overwrite

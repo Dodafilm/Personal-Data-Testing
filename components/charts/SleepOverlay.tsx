@@ -25,9 +25,9 @@ export default function SleepOverlay({ data }: SleepOverlayProps) {
       const phases = parsePipeString(d.sleep!.phases_5min!);
       const points = mapToClockHours(phases, d.sleep!.bedtime_start!, 5);
 
-      // Shift hours so sleep periods center nicely: if hour < 12, add 24 (next day)
+      // Normalize into [0, 24) window starting at midnight
       const shifted = points.map(p => ({
-        x: p.hour < 12 ? p.hour + 24 : p.hour,
+        x: p.hour >= 12 ? p.hour - 24 : p.hour,
         y: p.value,
       }));
 
@@ -70,10 +70,10 @@ export default function SleepOverlay({ data }: SleepOverlayProps) {
         scales: {
           x: {
             type: 'linear',
-            min: 18,
-            max: 32,
+            min: -6,
+            max: 12,
             ticks: {
-              stepSize: 1,
+              stepSize: 2,
               callback: (val) => formatHour(val as number),
               color: '#55556a',
               font: { size: 10 },
@@ -84,14 +84,14 @@ export default function SleepOverlay({ data }: SleepOverlayProps) {
           y: {
             min: 0.5,
             max: 4.5,
-            reverse: false,
             ticks: {
               stepSize: 1,
-              callback: (val) => STAGE_LABELS[val as number] || '',
-              color: '#55556a',
-              font: { size: 10 },
+              callback: (val) => STAGE_LABELS[Math.round(val as number)] ?? '',
+              color: '#a8a8c0',
+              font: { size: 12, weight: 'bold' as const },
+              padding: 8,
             },
-            title: { display: true, text: 'Sleep Stage', color: '#55556a' },
+            afterFit: (axis: { width: number }) => { axis.width = 70; },
             grid: { color: 'rgba(42, 42, 64, 0.5)' },
           },
         },

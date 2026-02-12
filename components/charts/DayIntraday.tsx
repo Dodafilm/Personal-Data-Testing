@@ -26,7 +26,6 @@ export default function DayIntraday({ day }: DayIntradayProps) {
   return (
     <div className="day-intraday">
       <SleepHypnogramCard day={day} />
-      <StressGaugeCard day={day} />
     </div>
   );
 }

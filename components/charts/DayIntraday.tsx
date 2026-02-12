@@ -462,6 +462,12 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
           />
         )}
 
+        {day.source === 'sample' && (
+          <div className="sample-data-notice">
+            Placeholder data — connect Oura or import data for real results
+          </div>
+        )}
+
         {hasAnyData && config ? (
           <canvas ref={canvasRef} />
         ) : (

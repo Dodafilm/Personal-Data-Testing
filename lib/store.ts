@@ -72,6 +72,24 @@ export function clearAllData() {
   keys.forEach(k => localStorage.removeItem(k));
 }
 
+export function clearSampleData() {
+  if (!isBrowser()) return;
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(KEY_PREFIX) && key !== SETTINGS_KEY) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const record = JSON.parse(raw);
+          if (record.source === 'sample') keys.push(key);
+        } catch { /* skip */ }
+      }
+    }
+  }
+  keys.forEach(k => localStorage.removeItem(k));
+}
+
 export function saveSettings(settings: Partial<Settings>) {
   if (!isBrowser()) return;
   const existing = loadSettings();

@@ -27,6 +27,8 @@ interface SettingsPanelProps {
   onBgEffectChange: (effect: string) => void;
   onClearData: () => void;
   onDataImported: () => void;
+  debugData: boolean;
+  onDebugDataToggle: (enabled: boolean) => void;
   isOuraConnected: boolean;
   ouraStatus: { text: string; type: string };
   onOuraConnect: () => void;
@@ -48,6 +50,8 @@ export default function SettingsPanel({
   onBgEffectChange,
   onClearData,
   onDataImported,
+  debugData,
+  onDebugDataToggle,
   isOuraConnected,
   ouraStatus,
   onOuraConnect,
@@ -438,6 +442,24 @@ export default function SettingsPanel({
               <option value="none">None</option>
             </select>
           </div>
+
+          {/* Debug Data */}
+          {!session?.user && (
+            <div className="setting-group">
+              <h3>Debug Data</h3>
+              <label className="debug-data-toggle">
+                <input
+                  type="checkbox"
+                  checked={debugData}
+                  onChange={e => onDebugDataToggle(e.target.checked)}
+                />
+                Show placeholder data
+              </label>
+              <p className="setting-hint">
+                Load sample data to preview the dashboard. Turn off to clear placeholder records.
+              </p>
+            </div>
+          )}
 
           {/* Clear Data */}
           <div className="setting-group">

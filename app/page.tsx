@@ -19,6 +19,7 @@ import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SleepOverlay from '@/components/charts/SleepOverlay';
 import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
+import { clearSampleData } from '@/lib/store';
 import dynamic from 'next/dynamic';
 import type { DayRecord, HealthEvent } from '@/lib/types';
 
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [gcalEvents, setGcalEvents] = useState<HealthEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
+  const [debugData, setDebugData] = useState(true);
 
   // Handle date picker changing to a different date
   const handleDateChange = useCallback((y: number, m: number, d: number) => {
@@ -76,11 +78,25 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusDateStr, gcal.isConnected]);
 
+  // Sync debugData state from persisted settings
+  useEffect(() => {
+    if (settings.debugData === false) setDebugData(false);
+  }, [settings.debugData]);
+
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
     if (sessionStatus === 'loading') return;
 
     async function init() {
+      // Check persisted debugData setting (default true for first-time anon)
+      const savedSettings = store.loadSettings();
+      const saved = savedSettings instanceof Promise ? await savedSettings : savedSettings;
+      if (saved.debugData === false) {
+        setDebugData(false);
+        monthData.refresh();
+        return;
+      }
+
       const result = store.getMonthData(2026, 1);
       const existing = result instanceof Promise ? await result : result;
 
@@ -152,6 +168,27 @@ export default function DashboardPage() {
     monthData.refresh();
   }, [monthData]);
 
+  const handleDebugDataToggle = useCallback(async (enabled: boolean) => {
+    setDebugData(enabled);
+    updateSettings({ debugData: enabled });
+
+    if (!enabled) {
+      // Clear sample data records
+      clearSampleData();
+    } else {
+      // Re-load sample data
+      try {
+        const res = await fetch('/data/sample-data.json');
+        const sampleData: DayRecord[] = await res.json();
+        const saveResult = store.saveDays(sampleData);
+        if (saveResult instanceof Promise) await saveResult;
+      } catch (err) {
+        console.warn('Could not load sample data:', err);
+      }
+    }
+    monthData.refresh();
+  }, [store, monthData, updateSettings]);
+
   return (
     <>
       <ThreeBackground effect={bgEffect} data={monthData.data} />
@@ -164,6 +201,8 @@ export default function DashboardPage() {
         bgEffect={bgEffect}
         onBgEffectChange={handleBgEffectChange}
         onClearData={handleClearData}
+        debugData={debugData}
+        onDebugDataToggle={handleDebugDataToggle}
         isOuraConnected={oura.isConnected}
         ouraStatus={oura.status}
         onOuraConnect={oura.startOAuth}

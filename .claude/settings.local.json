@@ -25,7 +25,8 @@
       "WebFetch(domain:vercel.com)",
       "Bash(npx prisma db push:*)",
       "WebFetch(domain:jsr.io)",
-      "WebFetch(domain:community.home-assistant.io)"
+      "WebFetch(domain:community.home-assistant.io)",
+      "Bash(node scripts/generate-sample-data.mjs:*)"
     ]
   }
 }

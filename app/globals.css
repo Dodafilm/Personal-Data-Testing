@@ -497,6 +497,32 @@ body {
   max-height: 350px;
 }
 
+.sample-data-notice {
+  background: rgba(108, 92, 231, 0.12);
+  border: 1px solid rgba(108, 92, 231, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--accent-secondary);
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.debug-data-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.debug-data-toggle input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  width: 16px;
+  height: 16px;
+}
+
 .overlay-fallback {
   color: var(--text-muted);
   font-size: 0.85rem;

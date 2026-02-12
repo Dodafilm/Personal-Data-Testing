@@ -57,33 +57,44 @@ export async function GET(
   if (startDate) apiParams.set('start_date', startDate);
   if (endDate) apiParams.set('end_date', endDate);
 
-  const apiUrl = `${BASE_URL}${path}?${apiParams}`;
-
   try {
-    const apiRes = await fetch(apiUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // Fetch all pages — Oura API v2 paginates via next_token,
+    // especially for heartrate which returns individual samples.
+    const allData: unknown[] = [];
+    let nextToken: string | null = null;
 
-    if (apiRes.status === 401) {
-      // Don't clear stored tokens here — a 401 from Oura could mean
-      // missing scope for this specific endpoint, not an expired token.
-      // The client-side fetch loop handles the "all endpoints failed" case.
-      return NextResponse.json(
-        { error: `Oura returned 401 for ${endpoint}` },
-        { status: 401 },
-      );
-    }
+    do {
+      const pageParams = new URLSearchParams(apiParams);
+      if (nextToken) pageParams.set('next_token', nextToken);
 
-    if (!apiRes.ok) {
-      const text = await apiRes.text();
-      return NextResponse.json(
-        { error: `Oura API error ${apiRes.status}: ${text}` },
-        { status: apiRes.status },
-      );
-    }
+      const apiUrl = `${BASE_URL}${path}?${pageParams}`;
+      const apiRes = await fetch(apiUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const data = await apiRes.json();
-    return NextResponse.json(data);
+      if (apiRes.status === 401) {
+        return NextResponse.json(
+          { error: `Oura returned 401 for ${endpoint}` },
+          { status: 401 },
+        );
+      }
+
+      if (!apiRes.ok) {
+        const text = await apiRes.text();
+        return NextResponse.json(
+          { error: `Oura API error ${apiRes.status}: ${text}` },
+          { status: apiRes.status },
+        );
+      }
+
+      const page = await apiRes.json();
+      if (page.data && Array.isArray(page.data)) {
+        allData.push(...page.data);
+      }
+      nextToken = page.next_token || null;
+    } while (nextToken);
+
+    return NextResponse.json({ data: allData });
   } catch (err) {
     return NextResponse.json(
       { error: `Proxy error: ${(err as Error).message}` },

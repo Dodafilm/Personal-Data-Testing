@@ -4,44 +4,98 @@ import { useState, useCallback } from 'react';
 import { useStore } from '@/lib/store-provider';
 import type { DayRecord } from '@/lib/types';
 
-const MONTHS = [
-  '', 'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+function formatDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatLabel(start: Date, end: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  const s = start.toLocaleDateString('en-US', opts);
+  const e = end.toLocaleDateString('en-US', { ...opts, year: 'numeric' });
+  return `${s} – ${e}`;
+}
 
 export function useMonthData(initialYear?: number, initialMonth?: number) {
   const store = useStore();
-  const [year, setYear] = useState(initialYear ?? new Date().getFullYear());
-  const [month, setMonth] = useState(initialMonth ?? new Date().getMonth() + 1);
+  const now = new Date();
+  const initDate = initialYear && initialMonth
+    ? new Date(initialYear, initialMonth - 1, now.getDate())
+    : now;
+
+  const [focusDate, setFocusDate] = useState(initDate);
   const [data, setData] = useState<DayRecord[]>([]);
 
+  // Derived year/month/day from focusDate for backward compat
+  const year = focusDate.getFullYear();
+  const month = focusDate.getMonth() + 1;
+  const day = focusDate.getDate();
+
+  // Compute 30-day lookback range
+  const endDate = new Date(focusDate);
+  const startDate = new Date(focusDate);
+  startDate.setDate(startDate.getDate() - 29);
+
+  const startStr = formatDate(startDate);
+  const endStr = formatDate(endDate);
+  const label = formatLabel(startDate, endDate);
+
   const refresh = useCallback(async () => {
-    const result = store.getMonthData(year, month);
+    const result = store.getDateRange(startStr, endStr);
     const resolved = result instanceof Promise ? await result : result;
     setData(resolved);
-  }, [year, month, store]);
+  }, [startStr, endStr, store]);
+
+  const setYear = useCallback((y: number) => {
+    setFocusDate(prev => {
+      const d = new Date(prev);
+      d.setFullYear(y);
+      return d;
+    });
+  }, []);
+
+  const setMonth = useCallback((m: number) => {
+    setFocusDate(prev => {
+      const d = new Date(prev);
+      d.setMonth(m - 1);
+      return d;
+    });
+  }, []);
+
+  const setDay = useCallback((day: number) => {
+    setFocusDate(prev => {
+      const d = new Date(prev);
+      d.setDate(day);
+      return d;
+    });
+  }, []);
+
+  const setFullDate = useCallback((y: number, m: number, d: number) => {
+    setFocusDate(new Date(y, m - 1, d));
+  }, []);
 
   const prevMonth = useCallback(() => {
-    setMonth(prev => {
-      if (prev <= 1) {
-        setYear(y => y - 1);
-        return 12;
-      }
-      return prev - 1;
+    setFocusDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 30);
+      return d;
     });
   }, []);
 
   const nextMonth = useCallback(() => {
-    setMonth(prev => {
-      if (prev >= 12) {
-        setYear(y => y + 1);
-        return 1;
-      }
-      return prev + 1;
+    setFocusDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 30);
+      return d;
     });
   }, []);
 
-  const label = `${MONTHS[month]} ${year}`;
-
-  return { year, month, data, label, refresh, prevMonth, nextMonth, setYear, setMonth };
+  return {
+    year, month, day, data, label, refresh,
+    prevMonth, nextMonth,
+    setYear, setMonth, setDay, setFullDate,
+    focusDate, startStr, endStr,
+  };
 }

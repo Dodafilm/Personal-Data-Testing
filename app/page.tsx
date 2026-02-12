@@ -12,7 +12,6 @@ import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import StressCharts from '@/components/charts/StressCharts';
-
 import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
@@ -24,45 +23,28 @@ const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground
 export default function DashboardPage() {
   const { data: session, status: sessionStatus } = useSession();
   const store = useStore();
-  const monthData = useMonthData(2026, 1);
+  const monthData = useMonthData();
   const { settings, updateSettings } = useSettings();
   const oura = useOuraConnection();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
 
-  // Single-day focus state
-  const [focusDay, setFocusDay] = useState<number | null>(null);
-
-  // Auto-select first day with data on month change
-  useEffect(() => {
-    if (monthData.data.length > 0) {
-      setFocusDay(parseInt(monthData.data[0].date.slice(8), 10));
-    } else {
-      setFocusDay(null);
-    }
-  }, [monthData.data]);
-
-  // Handle date picker changing to a different year/month/day
+  // Handle date picker changing to a different date
   const handleDateChange = useCallback((y: number, m: number, d: number) => {
-    if (y !== monthData.year || m !== monthData.month) {
-      monthData.setYear(y);
-      monthData.setMonth(m);
-    }
-    setFocusDay(d);
+    monthData.setFullDate(y, m, d);
   }, [monthData]);
 
-  // Derive the focused day record
+  // Derive the focused day record from the selected focus date
   const focusDayRecord = useMemo(() => {
-    if (focusDay === null) return null;
-    const dateStr = String(focusDay).padStart(2, '0');
-    return monthData.data.find(d => d.date.slice(8) === dateStr) ?? null;
-  }, [focusDay, monthData.data]);
+    const dayStr = String(monthData.day).padStart(2, '0');
+    const monthStr = String(monthData.month).padStart(2, '0');
+    const target = `${monthData.year}-${monthStr}-${dayStr}`;
+    return monthData.data.find(d => d.date === target) ?? null;
+  }, [monthData.year, monthData.month, monthData.day, monthData.data]);
 
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
-    // Don't run until session status is resolved — prevents loading
-    // sample data during the brief "loading" window for logged-in users
     if (sessionStatus === 'loading') return;
 
     async function init() {
@@ -76,8 +58,6 @@ export default function DashboardPage() {
           const sampleData: DayRecord[] = await res.json();
           const saveResult = store.saveDays(sampleData);
           if (saveResult instanceof Promise) await saveResult;
-          monthData.setYear(2026);
-          monthData.setMonth(1);
         } catch (err) {
           console.warn('Could not load sample data:', err);
         }
@@ -88,11 +68,11 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStatus, store]);
 
-  // Refresh data when month changes
+  // Refresh data when focus date changes (range shifts)
   useEffect(() => {
     monthData.refresh();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthData.year, monthData.month]);
+  }, [monthData.startStr, monthData.endStr]);
 
   // Load persisted bg effect
   useEffect(() => {
@@ -160,7 +140,7 @@ export default function DashboardPage() {
           onSettingsToggle={() => setSettingsOpen(o => !o)}
           year={monthData.year}
           month={monthData.month}
-          selectedDay={focusDay}
+          selectedDay={monthData.day}
           onDateChange={handleDateChange}
         />
 

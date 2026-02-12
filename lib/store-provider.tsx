@@ -14,6 +14,7 @@ export interface StoreApi {
   saveDay: (day: DayRecord) => void | Promise<void>;
   saveDays: (days: DayRecord[]) => void | Promise<void>;
   getMonthData: (year: number, month: number) => DayRecord[] | Promise<DayRecord[]>;
+  getDateRange: (start: string, end: string) => DayRecord[] | Promise<DayRecord[]>;
   getAllDates: () => string[] | Promise<string[]>;
   clearAllData: () => void | Promise<void>;
   loadSettings: () => Settings | Promise<Settings>;
@@ -27,6 +28,7 @@ const localStore: StoreApi = {
   saveDay: local.saveDay,
   saveDays: local.saveDays,
   getMonthData: local.getMonthData,
+  getDateRange: local.loadRange,
   getAllDates: local.getAllDates,
   clearAllData: local.clearAllData,
   loadSettings: local.loadSettings,
@@ -38,6 +40,7 @@ const cloudStore: StoreApi = {
   saveDay: cloud.cloudSaveDay,
   saveDays: cloud.cloudSaveDays,
   getMonthData: cloud.cloudGetMonthData,
+  getDateRange: cloud.cloudGetDateRange,
   getAllDates: cloud.cloudGetAllDates,
   clearAllData: cloud.cloudClearAllData,
   loadSettings: cloud.cloudLoadSettings,

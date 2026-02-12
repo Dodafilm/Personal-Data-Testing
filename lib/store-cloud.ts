@@ -27,6 +27,12 @@ export async function cloudGetMonthData(year: number, month: number): Promise<Da
   return res.json();
 }
 
+export async function cloudGetDateRange(start: string, end: string): Promise<DayRecord[]> {
+  const res = await fetch(`/api/health/records?start=${start}&end=${end}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function cloudGetAllDates(): Promise<string[]> {
   const res = await fetch('/api/health/records?dates_only=true');
   if (!res.ok) return [];

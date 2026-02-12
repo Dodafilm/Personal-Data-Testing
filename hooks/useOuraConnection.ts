@@ -23,7 +23,8 @@ export function useOuraConnection() {
 
   const checkConnection = useCallback(async () => {
     try {
-      const res = await fetch('/api/oura/daily_sleep?start_date=2000-01-01&end_date=2000-01-01');
+      // Use heartrate endpoint for connection check — always available with Heartrate scope
+      const res = await fetch('/api/oura/heartrate?start_date=2000-01-01&end_date=2000-01-01');
       setIsConnected(res.status !== 401);
     } catch {
       setIsConnected(false);
@@ -46,14 +47,15 @@ export function useOuraConnection() {
     ];
 
     const result: FetchResult = { sleep: 0, heart: 0, workout: 0, stress: 0, errors: [] };
+    let authFailures = 0;
 
     for (const ep of endpoints) {
       try {
         const res = await fetch(`/api/oura/${ep.path}?start_date=${startDate}&end_date=${endDate}`);
         if (res.status === 401) {
-          setIsConnected(false);
-          setStatus({ text: 'Token expired. Please reconnect your Oura Ring.', type: 'error' });
-          return;
+          authFailures++;
+          result.errors.push(`${ep.key}: not authorized (missing scope?)`);
+          continue; // Skip this endpoint, try the others
         }
         if (!res.ok) {
           const text = await res.text();
@@ -67,6 +69,13 @@ export function useOuraConnection() {
       } catch (err) {
         result.errors.push((err as Error).message);
       }
+    }
+
+    // If ALL endpoints returned 401, the token is truly expired
+    if (authFailures === endpoints.length) {
+      setIsConnected(false);
+      setStatus({ text: 'Token expired. Please reconnect your Oura Ring.', type: 'error' });
+      return;
     }
 
     // Try detailed sleep periods for intraday data (phases, bedtime timestamps).

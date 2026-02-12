@@ -65,20 +65,13 @@ export async function GET(
     });
 
     if (apiRes.status === 401) {
-      // For sleep_periods, a 401 likely means missing Sleep scope, not an expired token.
-      // Don't clear stored tokens — other endpoints still work fine.
-      if (endpoint !== 'sleep_periods') {
-        if (session?.user?.id) {
-          await prisma.userSettings.update({
-            where: { userId: session.user.id },
-            data: { ouraAccessToken: null, ouraRefreshToken: null, ouraTokenExpiry: null },
-          });
-        }
-        const response = NextResponse.json({ error: 'Token expired' }, { status: 401 });
-        response.cookies.delete('oura_token');
-        return response;
-      }
-      return NextResponse.json({ error: 'Scope not available' }, { status: 401 });
+      // Don't clear stored tokens here — a 401 from Oura could mean
+      // missing scope for this specific endpoint, not an expired token.
+      // The client-side fetch loop handles the "all endpoints failed" case.
+      return NextResponse.json(
+        { error: `Oura returned 401 for ${endpoint}` },
+        { status: 401 },
+      );
     }
 
     if (!apiRes.ok) {

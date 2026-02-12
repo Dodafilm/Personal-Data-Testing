@@ -25,7 +25,7 @@ import type { DayRecord } from '@/lib/types';
 const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground'), { ssr: false });
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const store = useStore();
   const monthData = useMonthData(2026, 1);
   const { settings, updateSettings } = useSettings();
@@ -56,6 +56,10 @@ export default function DashboardPage() {
 
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
+    // Don't run until session status is resolved — prevents loading
+    // sample data during the brief "loading" window for logged-in users
+    if (sessionStatus === 'loading') return;
+
     async function init() {
       const result = store.getMonthData(2026, 1);
       const existing = result instanceof Promise ? await result : result;
@@ -77,7 +81,7 @@ export default function DashboardPage() {
     }
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user, store]);
+  }, [sessionStatus, store]);
 
   // Refresh data when month changes
   useEffect(() => {

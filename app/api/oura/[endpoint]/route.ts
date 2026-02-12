@@ -53,9 +53,19 @@ export async function GET(
   const startDate = url.searchParams.get('start_date');
   const endDate = url.searchParams.get('end_date');
 
+  // Oura heartrate endpoint uses start_datetime/end_datetime (ISO 8601),
+  // while all other endpoints use start_date/end_date (YYYY-MM-DD).
+  const useDatetime = endpoint === 'heartrate';
+
   const apiParams = new URLSearchParams();
-  if (startDate) apiParams.set('start_date', startDate);
-  if (endDate) apiParams.set('end_date', endDate);
+  if (startDate) {
+    apiParams.set(useDatetime ? 'start_datetime' : 'start_date',
+      useDatetime ? `${startDate}T00:00:00+00:00` : startDate);
+  }
+  if (endDate) {
+    apiParams.set(useDatetime ? 'end_datetime' : 'end_date',
+      useDatetime ? `${endDate}T23:59:59+00:00` : endDate);
+  }
 
   try {
     // Fetch all pages — Oura API v2 paginates via next_token,

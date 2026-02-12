@@ -19,13 +19,14 @@ export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
         labels: getDayLabels(data),
         datasets: [{
           label: 'Resting HR',
-          data: data.map(d => d.heart?.resting_hr || 0),
+          data: data.map(d => d.heart?.resting_hr || null),
           borderColor: '#ff6b6b',
           backgroundColor: 'rgba(255, 107, 107, 0.1)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
           pointBackgroundColor: '#ff6b6b',
+          spanGaps: true,
         }],
       },
       options: {
@@ -42,13 +43,14 @@ export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
         labels: getDayLabels(data),
         datasets: [{
           label: 'HRV',
-          data: data.map(d => d.heart?.hrv_avg || 0),
+          data: data.map(d => d.heart?.hrv_avg || null),
           borderColor: '#fd79a8',
           backgroundColor: 'rgba(253, 121, 168, 0.1)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
           pointBackgroundColor: '#fd79a8',
+          spanGaps: true,
         }],
       },
       options: {
@@ -66,14 +68,14 @@ export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
         datasets: [
           {
             label: 'Min HR',
-            data: data.map(d => d.heart?.hr_min || 0),
+            data: data.map(d => d.heart?.hr_min || null),
             backgroundColor: 'rgba(255, 107, 107, 0.4)',
             borderColor: '#ff6b6b',
             borderWidth: 1,
           },
           {
             label: 'Max HR',
-            data: data.map(d => d.heart?.hr_max || 0),
+            data: data.map(d => d.heart?.hr_max || null),
             backgroundColor: 'rgba(253, 121, 168, 0.4)',
             borderColor: '#fd79a8',
             borderWidth: 1,

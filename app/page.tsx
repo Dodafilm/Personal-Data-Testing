@@ -100,8 +100,17 @@ export default function DashboardPage() {
       const result = store.getMonthData(2026, 1);
       const existing = result instanceof Promise ? await result : result;
 
-      // Only load sample data for anonymous users with no data
-      if (existing.length === 0 && !session?.user) {
+      // Load sample data for anonymous users if:
+      // - no data at all, OR
+      // - existing data is all sample-sourced but missing intraday fields (stale)
+      const needsSample = !session?.user && (
+        existing.length === 0 ||
+        (existing.every(d => d.source === 'sample') && !existing.some(d => d.heart?.samples?.length))
+      );
+
+      if (needsSample) {
+        // Clear stale sample data before loading fresh
+        clearSampleData();
         try {
           const res = await fetch('/data/sample-data.json');
           const sampleData: DayRecord[] = await res.json();

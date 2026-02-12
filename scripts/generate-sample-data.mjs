@@ -221,10 +221,13 @@ function generateDay(date) {
   };
 }
 
-// Generate Jan 1-31, 2026
+// Generate last 31 days ending yesterday (relative to Feb 12, 2026)
 const days = [];
-for (let d = 1; d <= 31; d++) {
-  const date = `2026-01-${String(d).padStart(2, '0')}`;
+const today = new Date(2026, 1, 12); // Feb 12, 2026
+for (let i = 31; i >= 1; i--) {
+  const d = new Date(today);
+  d.setDate(d.getDate() - i);
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   days.push(generateDay(date));
 }
 

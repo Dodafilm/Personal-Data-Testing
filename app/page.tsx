@@ -97,8 +97,9 @@ export default function DashboardPage() {
         return;
       }
 
-      const result = store.getMonthData(2026, 1);
-      const existing = result instanceof Promise ? await result : result;
+      // Check current date range for existing data
+      const rangeResult = store.getDateRange(monthData.startStr, monthData.endStr);
+      const existing = rangeResult instanceof Promise ? await rangeResult : rangeResult;
 
       // Load sample data for anonymous users if:
       // - no data at all, OR
@@ -109,20 +110,12 @@ export default function DashboardPage() {
       );
 
       if (needsSample) {
-        // Clear stale sample data before loading fresh
         clearSampleData();
         try {
           const res = await fetch('/data/sample-data.json');
           const sampleData: DayRecord[] = await res.json();
           const saveResult = store.saveDays(sampleData);
           if (saveResult instanceof Promise) await saveResult;
-
-          // Navigate to the most recent sample date so the 24-Hour View shows data
-          const lastDate = sampleData[sampleData.length - 1]?.date;
-          if (lastDate) {
-            const [y, m, d] = lastDate.split('-').map(Number);
-            monthData.setFullDate(y, m, d);
-          }
         } catch (err) {
           console.warn('Could not load sample data:', err);
         }

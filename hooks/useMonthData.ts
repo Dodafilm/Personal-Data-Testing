@@ -21,9 +21,11 @@ function formatLabel(start: Date, end: Date): string {
 export function useMonthData(initialYear?: number, initialMonth?: number) {
   const store = useStore();
   const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
   const initDate = initialYear && initialMonth
     ? new Date(initialYear, initialMonth - 1, now.getDate())
-    : now;
+    : yesterday;
 
   const [focusDate, setFocusDate] = useState(initDate);
   const [data, setData] = useState<DayRecord[]>([]);

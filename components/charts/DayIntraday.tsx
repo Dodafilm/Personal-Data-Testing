@@ -389,7 +389,7 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
     <div className="day-intraday">
       <div className="overlay-chart-card" ref={cardRef} style={{ position: 'relative' }}>
         <div className="intraday-header">
-          <h3>24-Hour View</h3>
+          <h3>24-Hour View{day?.date ? ` — ${new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}` : ''}</h3>
           <select
             className="intraday-view-select"
             value={viewMode}

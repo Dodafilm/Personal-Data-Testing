@@ -39,8 +39,9 @@ export function loadDay(date: string): DayRecord | null {
 export function loadRange(startDate: string, endDate: string): DayRecord[] {
   if (!isBrowser()) return [];
   const days: DayRecord[] = [];
-  const current = new Date(startDate);
-  const end = new Date(endDate);
+  // Parse as local time (not UTC) by appending T00:00:00
+  const current = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
   while (current <= end) {
     const dateStr = formatDate(current);
     const day = loadDay(dateStr);

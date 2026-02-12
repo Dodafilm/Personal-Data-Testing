@@ -133,6 +133,7 @@ function StressGaugeCard({ day }: { day: DayRecord }) {
 
   const { stress_high, recovery_high, day_summary } = day.stress;
   const total = stress_high + recovery_high;
+  const neutral = Math.max(0, 1440 - stress_high - recovery_high);
 
   const summaryClass =
     day_summary === 'restored' ? 'restored'
@@ -141,7 +142,7 @@ function StressGaugeCard({ day }: { day: DayRecord }) {
 
   return (
     <div className="overlay-chart-card">
-      <h3>Stress</h3>
+      <h3>Stress (24h)</h3>
       {total > 0 ? (
         <div className="stress-gauge">
           <div
@@ -162,6 +163,16 @@ function StressGaugeCard({ day }: { day: DayRecord }) {
           >
             {recovery_high}m recovery
           </div>
+          {neutral > 0 && (
+            <div
+              className="stress-gauge-segment stress-gauge-neutral"
+              style={{
+                flex: neutral,
+              }}
+            >
+              {Math.round(neutral / 60)}h
+            </div>
+          )}
         </div>
       ) : (
         <p className="overlay-fallback">No stress/recovery minutes recorded</p>

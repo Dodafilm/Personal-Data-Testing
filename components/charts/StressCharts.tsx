@@ -28,7 +28,7 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
         plugins: { legend: { position: 'bottom' } },
         scales: {
           x: { stacked: true },
-          y: { stacked: true, title: { display: true, text: 'Minutes', color: '#55556a' } },
+          y: { stacked: true, max: 1440, title: { display: true, text: 'Minutes (24h)', color: '#55556a' } },
         },
       },
     };

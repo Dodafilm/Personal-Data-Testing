@@ -95,7 +95,6 @@ function SleepHypnogramCard({ day }: { day: DayRecord }) {
             grid: { color: 'rgba(42, 42, 64, 0.5)' },
           },
           y: {
-            reverse: true,
             min: 0.5,
             max: 4.5,
             ticks: {

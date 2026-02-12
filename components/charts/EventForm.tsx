@@ -34,34 +34,41 @@ function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
+function currentTimeStr(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
 interface EventFormProps {
   initial?: HealthEvent | null;
+  dreamMode?: boolean;
   onSave: (event: HealthEvent) => void;
   onCancel: () => void;
 }
 
-export default function EventForm({ initial, onSave, onCancel }: EventFormProps) {
-  const [time, setTime] = useState(initial?.time || '');
+export default function EventForm({ initial, dreamMode, onSave, onCancel }: EventFormProps) {
+  const [time, setTime] = useState(initial?.time || (dreamMode ? currentTimeStr() : ''));
   const [endTime, setEndTime] = useState(initial?.endTime || '');
-  const [title, setTitle] = useState(initial?.title || '');
-  const [category, setCategory] = useState<EventCategory>(initial?.category || 'activity');
+  const [title, setTitle] = useState(initial?.title || (dreamMode ? 'Dream' : ''));
+  const [category, setCategory] = useState<EventCategory>(initial?.category || (dreamMode ? 'sleep' : 'activity'));
   const [description, setDescription] = useState(initial?.description || '');
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const autoStarted = useRef(false);
 
   useEffect(() => {
     setSpeechSupported(!!getSpeechRecognition());
   }, []);
 
   useEffect(() => {
-    setTime(initial?.time || '');
+    setTime(initial?.time || (dreamMode ? currentTimeStr() : ''));
     setEndTime(initial?.endTime || '');
-    setTitle(initial?.title || '');
-    setCategory(initial?.category || 'activity');
+    setTitle(initial?.title || (dreamMode ? 'Dream' : ''));
+    setCategory(initial?.category || (dreamMode ? 'sleep' : 'activity'));
     setDescription(initial?.description || '');
-  }, [initial]);
+  }, [initial, dreamMode]);
 
   const stopRecording = useCallback(() => {
     if (recognitionRef.current) {
@@ -111,6 +118,14 @@ export default function EventForm({ initial, onSave, onCancel }: EventFormProps)
     recognition.start();
   }, [stopRecording]);
 
+  // Auto-start recording in dream mode
+  useEffect(() => {
+    if (dreamMode && speechSupported && !autoStarted.current) {
+      autoStarted.current = true;
+      startRecording();
+    }
+  }, [dreamMode, speechSupported, startRecording]);
+
   const toggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording();
@@ -119,21 +134,11 @@ export default function EventForm({ initial, onSave, onCancel }: EventFormProps)
     }
   }, [isRecording, startRecording, stopRecording]);
 
-  // Apply transcript to title + description
+  // Apply transcript to description
   const applyTranscript = useCallback(() => {
     if (!transcript.trim()) return;
     const text = transcript.trim();
-    // First sentence → title, rest → description
-    const sentenceEnd = text.search(/[.!?]\s/);
-    if (sentenceEnd > 0 && sentenceEnd < 80) {
-      setTitle(text.slice(0, sentenceEnd + 1).trim());
-      setDescription(text.slice(sentenceEnd + 1).trim());
-    } else if (text.length <= 80) {
-      setTitle(text);
-    } else {
-      setTitle(text.slice(0, 80).trim());
-      setDescription(text.slice(80).trim());
-    }
+    setDescription(prev => prev ? `${prev} ${text}` : text);
     setTranscript('');
   }, [transcript]);
 
@@ -161,6 +166,60 @@ export default function EventForm({ initial, onSave, onCancel }: EventFormProps)
     });
   };
 
+  // Dream mode: streamlined layout
+  if (dreamMode) {
+    return (
+      <form className="event-form event-form-dream" onSubmit={handleSubmit}>
+        <div className="event-form-dream-header">
+          <span className="event-form-dream-icon">🌙</span>
+          <span className="event-form-dream-title">Dream Recording</span>
+          <span className="event-form-dream-time">{time}</span>
+        </div>
+
+        <div className="event-form-voice event-form-voice-prominent">
+          <button
+            type="button"
+            className={`event-form-mic event-form-mic-lg ${isRecording ? 'recording' : ''}`}
+            onClick={toggleRecording}
+            title={isRecording ? 'Stop recording' : 'Record dream'}
+          >
+            {isRecording ? '⏹' : '🎤'}
+          </button>
+          {isRecording && <span className="event-form-recording-label">Listening...</span>}
+          {!isRecording && !transcript && !description && (
+            <span className="event-form-dream-hint">Tap to describe your dream</span>
+          )}
+        </div>
+
+        {transcript && (
+          <div className="event-form-transcript">
+            <span className="event-form-transcript-text">{transcript}</span>
+            <button type="button" className="event-form-transcript-apply" onClick={applyTranscript}>
+              Apply
+            </button>
+          </div>
+        )}
+
+        <label>
+          Description
+          <textarea
+            className="event-form-textarea"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Your dream description will appear here..."
+            rows={4}
+          />
+        </label>
+
+        <div className="event-form-actions">
+          <button type="submit" className="event-form-save" disabled={!description.trim()}>Save Dream</button>
+          <button type="button" className="event-form-cancel" onClick={onCancel}>Cancel</button>
+        </div>
+      </form>
+    );
+  }
+
+  // Normal event form
   return (
     <form className="event-form" onSubmit={handleSubmit}>
       <div className="event-form-row">

@@ -33,6 +33,7 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
   // Event state
   const [activePopup, setActivePopup] = useState<{ event: HealthEvent; x: number; y: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [dreamMode, setDreamMode] = useState(false);
   const [editingEvent, setEditingEvent] = useState<HealthEvent | null>(null);
 
   const markerHitboxes = useRef<MarkerHitbox[]>([]);
@@ -357,6 +358,7 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
     const result = store.saveDay(updatedDay);
     if (result instanceof Promise) await result;
     setShowForm(false);
+    setDreamMode(false);
     setEditingEvent(null);
     setActivePopup(null);
     onDayUpdated?.();
@@ -422,10 +424,17 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
             </button>
             <button
               className="intraday-add-btn"
-              onClick={() => { setShowForm(true); setEditingEvent(null); }}
+              onClick={() => { setShowForm(true); setDreamMode(false); setEditingEvent(null); }}
               title="Add event marker"
             >
               +
+            </button>
+            <button
+              className="intraday-dream-btn"
+              onClick={() => { setShowForm(true); setDreamMode(true); setEditingEvent(null); }}
+              title="Record a dream"
+            >
+              🌙
             </button>
           </div>
           {viewMode === 'full' && (
@@ -447,8 +456,9 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
         {showForm && (
           <EventForm
             initial={editingEvent}
+            dreamMode={dreamMode && !editingEvent}
             onSave={handleSaveEvent}
-            onCancel={() => { setShowForm(false); setEditingEvent(null); }}
+            onCancel={() => { setShowForm(false); setDreamMode(false); setEditingEvent(null); }}
           />
         )}
 

@@ -1314,6 +1314,21 @@ body {
   opacity: 1;
   background: rgba(255,255,255,0.06);
 }
+.intraday-dream-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: 1.5px solid #74b9ff;
+  background: transparent;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+}
+.intraday-dream-btn:hover {
+  opacity: 1;
+  background: rgba(116, 185, 255, 0.1);
+}
 
 /* Event popup overlay */
 .event-popup-overlay {
@@ -1474,6 +1489,58 @@ body {
   color: var(--text-secondary, #8888a0);
 }
 .event-form-cancel:hover { background: rgba(255,255,255,0.06); }
+
+/* Dream mode form */
+.event-form-dream {
+  border-color: rgba(116, 185, 255, 0.3);
+}
+.event-form-dream-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.event-form-dream-icon {
+  font-size: 1.2rem;
+}
+.event-form-dream-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #74b9ff;
+}
+.event-form-dream-time {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #8888a0);
+}
+.event-form-dream-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, #55556a);
+  font-style: italic;
+}
+.event-form-voice-prominent {
+  justify-content: center;
+  padding: 8px 0;
+}
+.event-form-mic-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 1.3rem;
+}
+.event-form-textarea {
+  padding: 8px;
+  background: var(--bg-input, #12121e);
+  border: 1px solid var(--border, #2a2a40);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-primary, #e8e8f0);
+  font-size: 0.82rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 60px;
+}
+.event-form-textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary, #74b9ff);
+}
 
 /* Voice recording */
 .event-form-voice {

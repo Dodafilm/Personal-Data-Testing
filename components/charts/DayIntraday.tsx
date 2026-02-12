@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart } from './useChart';
 import { parsePipeString, mapToClockHours, formatHour } from '@/lib/intraday-utils';
@@ -33,16 +33,21 @@ export default function DayIntraday({ day }: DayIntradayProps) {
 
 /* ---- Sleep Hypnogram ---- */
 function SleepHypnogramCard({ day }: { day: DayRecord }) {
+  const [startHour, setStartHour] = useState(0);
+
   const config = useMemo((): ChartConfiguration | null => {
     if (!day.sleep?.phases_5min || !day.sleep?.bedtime_start) return null;
 
     const phases = parsePipeString(day.sleep.phases_5min);
     const points = mapToClockHours(phases, day.sleep.bedtime_start, 5);
 
-    const shifted = points.map(p => ({
-      x: p.hour < 12 ? p.hour + 24 : p.hour,
-      y: p.value,
-    }));
+    // Normalize each point into [startHour, startHour+24) window
+    const shifted = points.map(p => {
+      let x = p.hour;
+      while (x < startHour) x += 24;
+      while (x >= startHour + 24) x -= 24;
+      return { x, y: p.value };
+    });
 
     return {
       type: 'line',
@@ -78,10 +83,10 @@ function SleepHypnogramCard({ day }: { day: DayRecord }) {
         scales: {
           x: {
             type: 'linear',
-            min: 18,
-            max: 32,
+            min: startHour,
+            max: startHour + 24,
             ticks: {
-              stepSize: 1,
+              stepSize: 2,
               callback: (val) => formatHour(val as number),
               color: '#55556a',
               font: { size: 10 },
@@ -104,13 +109,27 @@ function SleepHypnogramCard({ day }: { day: DayRecord }) {
         },
       },
     };
-  }, [day]);
+  }, [day, startHour]);
 
   const canvasRef = useChart(config);
 
   return (
     <div className="overlay-chart-card">
-      <h3>Sleep Hypnogram</h3>
+      <div className="hypnogram-header">
+        <h3>Sleep Hypnogram</h3>
+        <label className="hypnogram-start-label">
+          Start
+          <input
+            type="number"
+            className="hypnogram-start-input"
+            min={0}
+            max={23}
+            value={startHour}
+            onChange={e => setStartHour(Math.min(23, Math.max(0, Number(e.target.value))))}
+          />
+          :00
+        </label>
+      </div>
       {config ? (
         <canvas ref={canvasRef} />
       ) : (

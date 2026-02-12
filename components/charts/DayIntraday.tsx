@@ -135,11 +135,12 @@ export default function DayIntraday({ day }: DayIntradayProps) {
     if (showSleep && hasSleep) {
       scales.ySleep = {
         position: 'left',
-        min: 0.5,
-        max: 4.5,
+        min: 1,
+        max: 4,
         ticks: {
           stepSize: 1,
-          callback: (val: unknown) => STAGE_LABELS[Math.round(val as number)] ?? '',
+          autoSkip: false,
+          callback: (val: unknown) => STAGE_LABELS[val as number] ?? '',
           color: '#74b9ff',
           font: { size: 11, weight: 'bold' as const },
           padding: 6,

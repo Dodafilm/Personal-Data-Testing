@@ -46,6 +46,16 @@ export default function DashboardPage() {
     return monthData.data.find(d => d.date === target) ?? null;
   }, [monthData.year, monthData.month, monthData.day, monthData.data]);
 
+  // Derive previous day record (for Sleep Effector view)
+  const prevDayRecord = useMemo(() => {
+    const focus = new Date(monthData.year, monthData.month - 1, monthData.day);
+    focus.setDate(focus.getDate() - 1);
+    const y = focus.getFullYear();
+    const m = String(focus.getMonth() + 1).padStart(2, '0');
+    const d = String(focus.getDate()).padStart(2, '0');
+    return monthData.data.find(r => r.date === `${y}-${m}-${d}`) ?? null;
+  }, [monthData.year, monthData.month, monthData.day, monthData.data]);
+
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -152,7 +162,7 @@ export default function DashboardPage() {
         {/* Intraday 24h Section */}
         <section className="metric-section">
           <h2 className="section-title">24-Hour View</h2>
-          <DayIntraday day={focusDayRecord} />
+          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} />
         </section>
 
         {/* Sleep Section */}

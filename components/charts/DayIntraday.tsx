@@ -8,22 +8,38 @@ import type { DayRecord } from '@/lib/types';
 
 const STAGE_LABELS: Record<number, string> = { 1: 'Deep', 2: 'Light', 3: 'REM', 4: 'Awake' };
 
+type ViewMode = 'full' | 'sleep-effector';
+
 interface DayIntradayProps {
   day: DayRecord | null;
+  prevDay?: DayRecord | null;
 }
 
-export default function DayIntraday({ day }: DayIntradayProps) {
+export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
   const [showSleep, setShowSleep] = useState(true);
   const [showHeart, setShowHeart] = useState(true);
   const [showActivity, setShowActivity] = useState(true);
   const [startHour, setStartHour] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>('full');
 
+  const effectiveStart = viewMode === 'sleep-effector' ? 8 : startHour;
+
+  // Check data availability depending on mode
   const hasSleep = !!(day?.sleep?.phases_5min && day?.sleep?.bedtime_start);
-  const hasHeart = !!(day?.heart?.samples && day.heart.samples.length > 0);
-  const hasActivity = !!(day?.workout && (
-    (day.workout.met_items && day.workout.met_items.length > 0 && day.workout.met_timestamp) ||
-    day.workout.class_5min
-  ));
+  const hasHeart = viewMode === 'sleep-effector'
+    ? !!(day?.heart?.samples?.length || prevDay?.heart?.samples?.length)
+    : !!(day?.heart?.samples?.length);
+  const hasActivity = viewMode === 'sleep-effector'
+    ? !!(
+        (day?.workout?.met_items?.length && day?.workout?.met_timestamp) ||
+        day?.workout?.class_5min ||
+        (prevDay?.workout?.met_items?.length && prevDay?.workout?.met_timestamp) ||
+        prevDay?.workout?.class_5min
+      )
+    : !!(day?.workout && (
+        (day.workout.met_items?.length && day.workout.met_timestamp) ||
+        day.workout.class_5min
+      ));
 
   const config = useMemo((): ChartConfiguration | null => {
     if (!day) return null;
@@ -32,16 +48,23 @@ export default function DayIntraday({ day }: DayIntradayProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const datasets: any[] = [];
 
-    // Sleep hypnogram dataset
+    // --- Sleep hypnogram dataset ---
     if (showSleep && hasSleep) {
       const phases = parsePipeString(day.sleep!.phases_5min!);
       const points = mapToClockHours(phases, day.sleep!.bedtime_start!, 5);
+
       const shifted = points.map(p => {
         let x = p.hour;
-        while (x < startHour) x += 24;
-        while (x >= startHour + 24) x -= 24;
+        if (viewMode === 'sleep-effector') {
+          // Evening hours (>=12) stay as-is, morning hours (<12) shift +24
+          if (x < 12) x += 24;
+        } else {
+          while (x < effectiveStart) x += 24;
+          while (x >= effectiveStart + 24) x -= 24;
+        }
         return { x, y: p.value };
       });
+
       datasets.push({
         label: 'Sleep Stage',
         data: shifted,
@@ -55,62 +78,99 @@ export default function DayIntraday({ day }: DayIntradayProps) {
       });
     }
 
-    // Heart rate dataset
+    // --- Heart rate dataset ---
     if (showHeart && hasHeart) {
-      const points = day.heart!.samples!.map(s => {
-        const dt = new Date(s.ts);
-        let hour = dt.getHours() + dt.getMinutes() / 60;
-        while (hour < startHour) hour += 24;
-        while (hour >= startHour + 24) hour -= 24;
-        return { x: hour, y: s.bpm };
-      }).sort((a, b) => a.x - b.x);
-      datasets.push({
-        label: 'Heart Rate',
-        data: points,
-        borderColor: '#ff6b6b',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
-        tension: 0.3,
-        yAxisID: 'yHeart',
-      });
-    }
-
-    // Activity dataset
-    if (showActivity && hasActivity) {
-      const w = day.workout!;
       let points: { x: number; y: number }[];
-      if (w.met_items && w.met_items.length > 0 && w.met_timestamp) {
-        const mapped = mapToClockHours(w.met_items, w.met_timestamp, 5);
-        points = mapped.map(p => {
-          let x = p.hour;
-          while (x < startHour) x += 24;
-          while (x >= startHour + 24) x -= 24;
-          return { x, y: p.value };
+
+      if (viewMode === 'sleep-effector') {
+        // Previous day samples: hours stay as-is (8-24 range)
+        const prev = (prevDay?.heart?.samples || []).map(s => {
+          const dt = new Date(s.ts);
+          return { x: dt.getHours() + dt.getMinutes() / 60, y: s.bpm };
         });
+        // Current day samples: hours + 24 (0-8 → 24-32)
+        const curr = (day?.heart?.samples || []).map(s => {
+          const dt = new Date(s.ts);
+          return { x: dt.getHours() + dt.getMinutes() / 60 + 24, y: s.bpm };
+        });
+        points = [...prev, ...curr]
+          .filter(p => p.x >= 8 && p.x < 32)
+          .sort((a, b) => a.x - b.x);
       } else {
-        const phases = parsePipeString(w.class_5min!);
-        const startOfDay = day.date + 'T00:00:00';
-        const mapped = mapToClockHours(phases, startOfDay, 5);
-        points = mapped.map(p => {
-          let x = p.hour;
-          while (x < startHour) x += 24;
-          while (x >= startHour + 24) x -= 24;
-          return { x, y: p.value };
+        points = (day?.heart?.samples || []).map(s => {
+          const dt = new Date(s.ts);
+          let hour = dt.getHours() + dt.getMinutes() / 60;
+          while (hour < effectiveStart) hour += 24;
+          while (hour >= effectiveStart + 24) hour -= 24;
+          return { x: hour, y: s.bpm };
+        }).sort((a, b) => a.x - b.x);
+      }
+
+      if (points.length > 0) {
+        datasets.push({
+          label: 'Heart Rate',
+          data: points,
+          borderColor: '#ff6b6b',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'yHeart',
         });
       }
-      points.sort((a, b) => a.x - b.x);
-      datasets.push({
-        label: 'Activity',
-        data: points,
-        borderColor: '#55efc4',
-        backgroundColor: 'rgba(85, 239, 196, 0.08)',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: true,
-        tension: 0.3,
-        yAxisID: 'yActivity',
-      });
+    }
+
+    // --- Activity dataset ---
+    if (showActivity && hasActivity) {
+      let points: { x: number; y: number }[] = [];
+
+      if (viewMode === 'sleep-effector') {
+        // Previous day activity: hours as-is
+        const prevPts = getActivityPoints(prevDay, 0);
+        // Current day activity: hours + 24
+        const currPts = getActivityPoints(day, 24);
+        points = [...prevPts, ...currPts]
+          .filter(p => p.x >= 8 && p.x < 32)
+          .sort((a, b) => a.x - b.x);
+      } else {
+        const w = day?.workout;
+        if (w) {
+          if (w.met_items && w.met_items.length > 0 && w.met_timestamp) {
+            const mapped = mapToClockHours(w.met_items, w.met_timestamp, 5);
+            points = mapped.map(p => {
+              let x = p.hour;
+              while (x < effectiveStart) x += 24;
+              while (x >= effectiveStart + 24) x -= 24;
+              return { x, y: p.value };
+            });
+          } else if (w.class_5min) {
+            const phases = parsePipeString(w.class_5min);
+            const startOfDay = day!.date + 'T00:00:00';
+            const mapped = mapToClockHours(phases, startOfDay, 5);
+            points = mapped.map(p => {
+              let x = p.hour;
+              while (x < effectiveStart) x += 24;
+              while (x >= effectiveStart + 24) x -= 24;
+              return { x, y: p.value };
+            });
+          }
+          points.sort((a, b) => a.x - b.x);
+        }
+      }
+
+      if (points.length > 0) {
+        datasets.push({
+          label: 'Activity',
+          data: points,
+          borderColor: '#55efc4',
+          backgroundColor: 'rgba(85, 239, 196, 0.08)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+          yAxisID: 'yActivity',
+        });
+      }
     }
 
     if (datasets.length === 0) return null;
@@ -119,8 +179,8 @@ export default function DayIntraday({ day }: DayIntradayProps) {
     const scales: any = {
       x: {
         type: 'linear',
-        min: startHour,
-        max: startHour + 24,
+        min: effectiveStart,
+        max: effectiveStart + 24,
         ticks: {
           stepSize: 2,
           callback: (val: unknown) => formatHour(val as number),
@@ -205,7 +265,7 @@ export default function DayIntraday({ day }: DayIntradayProps) {
         scales,
       },
     };
-  }, [day, showSleep, showHeart, showActivity, startHour, hasSleep, hasHeart, hasActivity]);
+  }, [day, prevDay, showSleep, showHeart, showActivity, effectiveStart, startHour, viewMode, hasSleep, hasHeart, hasActivity]);
 
   const canvasRef = useChart(config);
 
@@ -226,6 +286,14 @@ export default function DayIntraday({ day }: DayIntradayProps) {
       <div className="overlay-chart-card">
         <div className="intraday-header">
           <h3>24-Hour View</h3>
+          <select
+            className="intraday-view-select"
+            value={viewMode}
+            onChange={e => setViewMode(e.target.value as ViewMode)}
+          >
+            <option value="full">Full Day</option>
+            <option value="sleep-effector">Sleep Effector</option>
+          </select>
           <div className="intraday-toggles">
             <button
               className={`intraday-toggle ${showSleep ? 'active' : ''}`}
@@ -249,18 +317,20 @@ export default function DayIntraday({ day }: DayIntradayProps) {
               Activity
             </button>
           </div>
-          <label className="hypnogram-start-label">
-            Start
-            <input
-              type="number"
-              className="hypnogram-start-input"
-              min={0}
-              max={23}
-              value={startHour}
-              onChange={e => setStartHour(Math.min(23, Math.max(0, Number(e.target.value))))}
-            />
-            :00
-          </label>
+          {viewMode === 'full' && (
+            <label className="hypnogram-start-label">
+              Start
+              <input
+                type="number"
+                className="hypnogram-start-input"
+                min={0}
+                max={23}
+                value={startHour}
+                onChange={e => setStartHour(Math.min(23, Math.max(0, Number(e.target.value))))}
+              />
+              :00
+            </label>
+          )}
         </div>
         {hasAnyData && config ? (
           <canvas ref={canvasRef} />
@@ -272,68 +342,19 @@ export default function DayIntraday({ day }: DayIntradayProps) {
   );
 }
 
-/* ---- Stress Gauge (unused, retained) ---- */
-function StressGaugeCard({ day }: { day: DayRecord }) {
-  if (!day.stress) {
-    return (
-      <div className="overlay-chart-card">
-        <h3>Stress</h3>
-        <p className="overlay-fallback">No stress data for this day</p>
-      </div>
-    );
+/** Extract activity points from a day record, adding hourOffset to each hour value. */
+function getActivityPoints(d: DayRecord | null | undefined, hourOffset: number): { x: number; y: number }[] {
+  if (!d?.workout) return [];
+  const w = d.workout;
+  if (w.met_items && w.met_items.length > 0 && w.met_timestamp) {
+    const mapped = mapToClockHours(w.met_items, w.met_timestamp, 5);
+    return mapped.map(p => ({ x: p.hour + hourOffset, y: p.value }));
   }
-
-  const { stress_high, recovery_high, day_summary } = day.stress;
-  const total = stress_high + recovery_high;
-  const neutral = Math.max(0, 1440 - stress_high - recovery_high);
-
-  const summaryClass =
-    day_summary === 'restored' ? 'restored'
-    : day_summary === 'stressful' ? 'stressful'
-    : 'normal';
-
-  return (
-    <div className="overlay-chart-card">
-      <h3>Stress (24h)</h3>
-      {total > 0 ? (
-        <div className="stress-gauge">
-          <div
-            className="stress-gauge-segment"
-            style={{
-              flex: stress_high,
-              background: '#ffa500',
-            }}
-          >
-            {stress_high}m stress
-          </div>
-          <div
-            className="stress-gauge-segment"
-            style={{
-              flex: recovery_high,
-              background: '#55efc4',
-            }}
-          >
-            {recovery_high}m recovery
-          </div>
-          {neutral > 0 && (
-            <div
-              className="stress-gauge-segment stress-gauge-neutral"
-              style={{
-                flex: neutral,
-              }}
-            >
-              {Math.round(neutral / 60)}h
-            </div>
-          )}
-        </div>
-      ) : (
-        <p className="overlay-fallback">No stress/recovery minutes recorded</p>
-      )}
-      <div>
-        <span className={`stress-badge ${summaryClass}`}>
-          {day_summary}
-        </span>
-      </div>
-    </div>
-  );
+  if (w.class_5min) {
+    const phases = parsePipeString(w.class_5min);
+    const startOfDay = d.date + 'T00:00:00';
+    const mapped = mapToClockHours(phases, startOfDay, 5);
+    return mapped.map(p => ({ x: p.hour + hourOffset, y: p.value }));
+  }
+  return [];
 }

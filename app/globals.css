@@ -1524,3 +1524,55 @@ body {
     flex: 1;
   }
 }
+
+/* ===== Google Calendar Picker ===== */
+.gcal-picker {
+  margin-top: 12px;
+}
+
+.gcal-picker-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.gcal-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gcal-calendar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.gcal-calendar-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.gcal-calendar-item input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}
+
+.gcal-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Google Calendar event badge */
+.event-gcal-badge {
+  background: rgba(66, 133, 244, 0.18);
+  color: #4285f4;
+}

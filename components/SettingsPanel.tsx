@@ -12,6 +12,12 @@ function useOrigin() {
   return origin;
 }
 
+interface GcalCalendar {
+  id: string;
+  summary: string;
+  backgroundColor?: string;
+}
+
 interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
@@ -26,6 +32,15 @@ interface SettingsPanelProps {
   onOuraConnect: () => void;
   onOuraDisconnect: () => void;
   onOuraFetch: (startDate: string, endDate: string) => void;
+  // Google Calendar
+  isGcalConnected: boolean;
+  gcalStatus: { text: string; type: string };
+  gcalCalendars: GcalCalendar[];
+  gcalSelectedIds: string[];
+  onGcalConnect: () => void;
+  onGcalDisconnect: () => void;
+  onGcalSaveSelection: (ids: string[]) => void;
+  onGcalSelectedIdsChange: (ids: string[]) => void;
 }
 
 export default function SettingsPanel({
@@ -40,6 +55,14 @@ export default function SettingsPanel({
   onOuraConnect,
   onOuraDisconnect,
   onOuraFetch,
+  isGcalConnected,
+  gcalStatus,
+  gcalCalendars,
+  gcalSelectedIds,
+  onGcalConnect,
+  onGcalDisconnect,
+  onGcalSaveSelection,
+  onGcalSelectedIdsChange,
 }: SettingsPanelProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -356,6 +379,70 @@ export default function SettingsPanel({
               <div className={`status-msg ${ouraStatus.type}`}>{ouraStatus.text}</div>
             )}
           </div>
+
+          {/* Google Calendar (authenticated users only) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Google Calendar</h3>
+              <p className="setting-hint">
+                Connect your Google Calendar to display events as read-only markers on the 24-Hour View.
+              </p>
+
+              {isGcalConnected ? (
+                <>
+                  <div className="connected-badge">
+                    <span className="connected-dot" />
+                    <span>Connected to Google Calendar</span>
+                  </div>
+
+                  {gcalCalendars.length > 0 && (
+                    <div className="gcal-picker">
+                      <label className="gcal-picker-label">Select calendars to display:</label>
+                      <div className="gcal-calendar-list">
+                        {gcalCalendars.map(cal => (
+                          <label key={cal.id} className="gcal-calendar-item">
+                            <input
+                              type="checkbox"
+                              checked={gcalSelectedIds.includes(cal.id)}
+                              onChange={() => {
+                                const next = gcalSelectedIds.includes(cal.id)
+                                  ? gcalSelectedIds.filter(id => id !== cal.id)
+                                  : [...gcalSelectedIds, cal.id];
+                                onGcalSelectedIdsChange(next);
+                              }}
+                            />
+                            {cal.backgroundColor && (
+                              <span className="gcal-color-dot" style={{ background: cal.backgroundColor }} />
+                            )}
+                            <span>{cal.summary}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => onGcalSaveSelection(gcalSelectedIds)}
+                        style={{ marginTop: 8 }}
+                      >
+                        Save Selection
+                      </button>
+                    </div>
+                  )}
+
+                  <button className="btn btn-danger" onClick={onGcalDisconnect} style={{ marginTop: 8 }}>
+                    Disconnect
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-primary" onClick={onGcalConnect}>
+                  Connect Google Calendar
+                </button>
+              )}
+
+              {gcalStatus.text && (
+                <div className={`status-msg ${gcalStatus.type}`}>{gcalStatus.text}</div>
+              )}
+            </div>
+          )}
 
           {/* 3D Background */}
           <div className="setting-group">

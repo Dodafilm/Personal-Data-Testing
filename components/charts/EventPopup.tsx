@@ -41,7 +41,12 @@ export default function EventPopup({ event, x, y, containerRect, onEdit, onDelet
         </div>
         <div className="event-popup-title">{event.title}</div>
         {event.description && <div className="event-popup-desc">{event.description}</div>}
-        {event.isAuto && <span className="event-auto-badge">Auto-detected</span>}
+        {event.isAuto && event.id.startsWith('gcal-') && (
+          <span className="event-auto-badge event-gcal-badge">Google Calendar</span>
+        )}
+        {event.isAuto && !event.id.startsWith('gcal-') && (
+          <span className="event-auto-badge">Auto-detected</span>
+        )}
         {!event.isAuto && (
           <div className="event-popup-actions">
             <button onClick={onEdit}>Edit</button>

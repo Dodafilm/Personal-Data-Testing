@@ -19,9 +19,10 @@ interface DayIntradayProps {
   day: DayRecord | null;
   prevDay?: DayRecord | null;
   onDayUpdated?: () => void;
+  gcalEvents?: HealthEvent[];
 }
 
-export default function DayIntraday({ day, prevDay, onDayUpdated }: DayIntradayProps) {
+export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [] }: DayIntradayProps) {
   const store = useStore();
   const [showSleep, setShowSleep] = useState(true);
   const [showHeart, setShowHeart] = useState(true);
@@ -56,11 +57,11 @@ export default function DayIntraday({ day, prevDay, onDayUpdated }: DayIntradayP
         const h = parseInt(e.time.split(':')[0], 10);
         return h >= 8;
       });
-      return [...prevManual, ...prevAuto, ...manual, ...autoCurrent];
+      return [...prevManual, ...prevAuto, ...manual, ...autoCurrent, ...gcalEvents];
     }
 
-    return [...manual, ...autoCurrent];
-  }, [day, prevDay, viewMode]);
+    return [...manual, ...autoCurrent, ...gcalEvents];
+  }, [day, prevDay, viewMode, gcalEvents]);
 
   // Check data availability depending on mode
   const hasSleep = !!(day?.sleep?.phases_5min && day?.sleep?.bedtime_start);

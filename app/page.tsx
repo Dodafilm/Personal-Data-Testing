@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store-provider';
 import { useMonthData } from '@/hooks/useMonthData';
 import { useSettings } from '@/hooks/useSettings';
 import { useOuraConnection } from '@/hooks/useOuraConnection';
+import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import DashboardHeader from '@/components/DashboardHeader';
 import SettingsPanel from '@/components/SettingsPanel';
 import DayDetail from '@/components/DayDetail';
@@ -19,7 +20,7 @@ import SleepOverlay from '@/components/charts/SleepOverlay';
 import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
-import type { DayRecord } from '@/lib/types';
+import type { DayRecord, HealthEvent } from '@/lib/types';
 
 const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground'), { ssr: false });
 
@@ -29,7 +30,9 @@ export default function DashboardPage() {
   const monthData = useMonthData();
   const { settings, updateSettings } = useSettings();
   const oura = useOuraConnection();
+  const gcal = useGoogleCalendar();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [gcalEvents, setGcalEvents] = useState<HealthEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
 
@@ -55,6 +58,23 @@ export default function DashboardPage() {
     const d = String(focus.getDate()).padStart(2, '0');
     return monthData.data.find(r => r.date === `${y}-${m}-${d}`) ?? null;
   }, [monthData.year, monthData.month, monthData.day, monthData.data]);
+
+  // Focus date as YYYY-MM-DD string for gcal event fetching
+  const focusDateStr = useMemo(() => {
+    const dayStr = String(monthData.day).padStart(2, '0');
+    const monthStr = String(monthData.month).padStart(2, '0');
+    return `${monthData.year}-${monthStr}-${dayStr}`;
+  }, [monthData.year, monthData.month, monthData.day]);
+
+  // Fetch Google Calendar events when focus date changes
+  useEffect(() => {
+    if (!gcal.isConnected) {
+      setGcalEvents([]);
+      return;
+    }
+    gcal.fetchEvents(focusDateStr).then(setGcalEvents);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusDateStr, gcal.isConnected]);
 
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
@@ -110,6 +130,24 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Check Google Calendar connection on page load
+  useEffect(() => {
+    if (!session?.user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('gcal_connected') === 'true') {
+      gcal.setIsConnected(true);
+      gcal.setStatus({ text: 'Connected to Google Calendar!', type: 'success' });
+      gcal.loadCalendars();
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (params.get('gcal_error')) {
+      gcal.setStatus({ text: `Google Calendar error: ${params.get('gcal_error')}`, type: 'error' });
+      window.history.replaceState(null, '', window.location.pathname);
+    } else {
+      gcal.checkConnection();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user]);
+
   const handleBgEffectChange = useCallback((effect: string) => {
     setBgEffect(effect);
     updateSettings({ bgEffect: effect });
@@ -143,6 +181,14 @@ export default function DashboardPage() {
         onOuraDisconnect={oura.disconnect}
         onOuraFetch={(start, end) => oura.fetchData(start, end, handleDataImported)}
         onDataImported={handleDataImported}
+        isGcalConnected={gcal.isConnected}
+        gcalStatus={gcal.status}
+        gcalCalendars={gcal.calendars}
+        gcalSelectedIds={gcal.selectedIds}
+        onGcalConnect={gcal.startOAuth}
+        onGcalDisconnect={gcal.disconnect}
+        onGcalSaveSelection={gcal.saveSelection}
+        onGcalSelectedIdsChange={gcal.setSelectedIds}
       />
 
       <div className="dashboard">
@@ -162,7 +208,7 @@ export default function DashboardPage() {
         {/* Intraday 24h Section */}
         <section className="metric-section">
           <h2 className="section-title">24-Hour View</h2>
-          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} onDayUpdated={monthData.refresh} />
+          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} onDayUpdated={monthData.refresh} gcalEvents={gcalEvents} />
         </section>
 
         {/* Sleep Section */}

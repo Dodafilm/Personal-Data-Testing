@@ -15,6 +15,7 @@ import StressCharts from '@/components/charts/StressCharts';
 import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import ActivityOverlay from '@/components/charts/ActivityOverlay';
+import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
 import type { DayRecord } from '@/lib/types';
@@ -165,6 +166,7 @@ export default function DashboardPage() {
         {/* Activity Section */}
         <section className="metric-section">
           <h2 className="section-title workout">Activity</h2>
+          <ActivityCharts data={monthData.data} onDayClick={setSelectedDay} />
           <ActivityOverlay data={monthData.data} />
         </section>
 

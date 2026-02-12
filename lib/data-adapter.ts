@@ -7,7 +7,7 @@ export function normalizeOuraSleep(apiData: { data?: Array<Record<string, unknow
     const isDetailed = item.total_sleep_duration != null;
     const contributors = item.contributors as Record<string, number> | undefined;
 
-    return {
+    const record: DayRecord = {
       date: item.day as string,
       source: 'oura',
       sleep: isDetailed ? {
@@ -32,6 +32,23 @@ export function normalizeOuraSleep(apiData: { data?: Array<Record<string, unknow
         readiness_score: (item.score as number) || 0,
       },
     };
+
+    // Detailed sleep periods include heart rate & HRV aggregates
+    if (isDetailed) {
+      const avgHr = item.average_heart_rate as number | undefined;
+      const lowestHr = item.lowest_heart_rate as number | undefined;
+      const avgHrv = item.average_hrv as number | undefined;
+      if (avgHr || lowestHr || avgHrv) {
+        record.heart = {
+          resting_hr: lowestHr || avgHr || 0,
+          hrv_avg: avgHrv || 0,
+          hr_min: lowestHr || 0,
+          hr_max: avgHr || 0,
+        };
+      }
+    }
+
+    return record;
   });
 }
 

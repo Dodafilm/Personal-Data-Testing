@@ -24,7 +24,8 @@
       "Bash(node -e:*)",
       "WebFetch(domain:vercel.com)",
       "Bash(npx prisma db push:*)",
-      "WebFetch(domain:jsr.io)"
+      "WebFetch(domain:jsr.io)",
+      "WebFetch(domain:community.home-assistant.io)"
     ]
   }
 }

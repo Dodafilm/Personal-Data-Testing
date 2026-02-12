@@ -37,8 +37,6 @@ interface SettingsPanelProps {
   gcalStatus: { text: string; type: string };
   gcalCalendars: GcalCalendar[];
   gcalSelectedIds: string[];
-  onGcalConnect: () => void;
-  onGcalDisconnect: () => void;
   onGcalSaveSelection: (ids: string[]) => void;
   onGcalSelectedIdsChange: (ids: string[]) => void;
 }
@@ -59,8 +57,6 @@ export default function SettingsPanel({
   gcalStatus,
   gcalCalendars,
   gcalSelectedIds,
-  onGcalConnect,
-  onGcalDisconnect,
   onGcalSaveSelection,
   onGcalSelectedIdsChange,
 }: SettingsPanelProps) {
@@ -380,62 +376,50 @@ export default function SettingsPanel({
             )}
           </div>
 
-          {/* Google Calendar (authenticated users only) */}
-          {session?.user && (
+          {/* Google Calendar (shows when signed in via Google) */}
+          {session?.user && isGcalConnected && (
             <div className="setting-group">
               <h3>Google Calendar</h3>
               <p className="setting-hint">
-                Connect your Google Calendar to display events as read-only markers on the 24-Hour View.
+                Your Google sign-in includes calendar access. Select which calendars to show as markers on the 24-Hour View.
               </p>
 
-              {isGcalConnected ? (
-                <>
-                  <div className="connected-badge">
-                    <span className="connected-dot" />
-                    <span>Connected to Google Calendar</span>
+              <div className="connected-badge">
+                <span className="connected-dot" />
+                <span>Connected via Google sign-in</span>
+              </div>
+
+              {gcalCalendars.length > 0 && (
+                <div className="gcal-picker">
+                  <label className="gcal-picker-label">Select calendars to display:</label>
+                  <div className="gcal-calendar-list">
+                    {gcalCalendars.map(cal => (
+                      <label key={cal.id} className="gcal-calendar-item">
+                        <input
+                          type="checkbox"
+                          checked={gcalSelectedIds.includes(cal.id)}
+                          onChange={() => {
+                            const next = gcalSelectedIds.includes(cal.id)
+                              ? gcalSelectedIds.filter(id => id !== cal.id)
+                              : [...gcalSelectedIds, cal.id];
+                            onGcalSelectedIdsChange(next);
+                          }}
+                        />
+                        {cal.backgroundColor && (
+                          <span className="gcal-color-dot" style={{ background: cal.backgroundColor }} />
+                        )}
+                        <span>{cal.summary}</span>
+                      </label>
+                    ))}
                   </div>
-
-                  {gcalCalendars.length > 0 && (
-                    <div className="gcal-picker">
-                      <label className="gcal-picker-label">Select calendars to display:</label>
-                      <div className="gcal-calendar-list">
-                        {gcalCalendars.map(cal => (
-                          <label key={cal.id} className="gcal-calendar-item">
-                            <input
-                              type="checkbox"
-                              checked={gcalSelectedIds.includes(cal.id)}
-                              onChange={() => {
-                                const next = gcalSelectedIds.includes(cal.id)
-                                  ? gcalSelectedIds.filter(id => id !== cal.id)
-                                  : [...gcalSelectedIds, cal.id];
-                                onGcalSelectedIdsChange(next);
-                              }}
-                            />
-                            {cal.backgroundColor && (
-                              <span className="gcal-color-dot" style={{ background: cal.backgroundColor }} />
-                            )}
-                            <span>{cal.summary}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => onGcalSaveSelection(gcalSelectedIds)}
-                        style={{ marginTop: 8 }}
-                      >
-                        Save Selection
-                      </button>
-                    </div>
-                  )}
-
-                  <button className="btn btn-danger" onClick={onGcalDisconnect} style={{ marginTop: 8 }}>
-                    Disconnect
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => onGcalSaveSelection(gcalSelectedIds)}
+                    style={{ marginTop: 8 }}
+                  >
+                    Save Selection
                   </button>
-                </>
-              ) : (
-                <button className="btn btn-primary" onClick={onGcalConnect}>
-                  Connect Google Calendar
-                </button>
+                </div>
               )}
 
               {gcalStatus.text && (

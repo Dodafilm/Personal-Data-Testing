@@ -90,9 +90,6 @@ model UserSettings {
   ouraAccessToken  String?   @db.Text
   ouraRefreshToken String?   @db.Text
   ouraTokenExpiry  DateTime?
-  gcalAccessToken  String?   @db.Text
-  gcalRefreshToken String?   @db.Text
-  gcalTokenExpiry  DateTime?
   gcalCalendarIds  String[]  @default([])
   extraSettings    Json?
   shareKey         String?   @unique

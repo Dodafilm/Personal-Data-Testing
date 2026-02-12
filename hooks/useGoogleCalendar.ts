@@ -15,10 +15,7 @@ export function useGoogleCalendar() {
   const [calendars, setCalendars] = useState<CalendarInfo[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const startOAuth = useCallback(() => {
-    window.location.href = '/api/gcal/authorize';
-  }, []);
-
+  // Check if user signed in with Google (has calendar access) by trying the calendars endpoint
   const checkConnection = useCallback(async () => {
     try {
       const res = await fetch('/api/gcal/calendars');
@@ -33,16 +30,6 @@ export function useGoogleCalendar() {
     } catch {
       setIsConnected(false);
     }
-  }, []);
-
-  const disconnect = useCallback(async () => {
-    try {
-      await fetch('/api/gcal/disconnect', { method: 'POST' });
-    } catch { /* ignore */ }
-    setIsConnected(false);
-    setCalendars([]);
-    setSelectedIds([]);
-    setStatus({ text: 'Google Calendar disconnected.', type: '' });
   }, []);
 
   const loadCalendars = useCallback(async () => {
@@ -84,15 +71,12 @@ export function useGoogleCalendar() {
 
   return {
     isConnected,
-    setIsConnected,
     status,
     setStatus,
     calendars,
     selectedIds,
     setSelectedIds,
-    startOAuth,
     checkConnection,
-    disconnect,
     loadCalendars,
     saveSelection,
     fetchEvents,

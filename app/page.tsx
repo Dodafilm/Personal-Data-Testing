@@ -130,21 +130,10 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Check Google Calendar connection on page load
+  // Check Google Calendar connection when signed in
   useEffect(() => {
     if (!session?.user) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('gcal_connected') === 'true') {
-      gcal.setIsConnected(true);
-      gcal.setStatus({ text: 'Connected to Google Calendar!', type: 'success' });
-      gcal.loadCalendars();
-      window.history.replaceState(null, '', window.location.pathname);
-    } else if (params.get('gcal_error')) {
-      gcal.setStatus({ text: `Google Calendar error: ${params.get('gcal_error')}`, type: 'error' });
-      window.history.replaceState(null, '', window.location.pathname);
-    } else {
-      gcal.checkConnection();
-    }
+    gcal.checkConnection();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user]);
 
@@ -185,8 +174,6 @@ export default function DashboardPage() {
         gcalStatus={gcal.status}
         gcalCalendars={gcal.calendars}
         gcalSelectedIds={gcal.selectedIds}
-        onGcalConnect={gcal.startOAuth}
-        onGcalDisconnect={gcal.disconnect}
         onGcalSaveSelection={gcal.saveSelection}
         onGcalSelectedIdsChange={gcal.setSelectedIds}
       />

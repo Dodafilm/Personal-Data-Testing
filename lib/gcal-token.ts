@@ -3,31 +3,32 @@ import { prisma } from '@/lib/prisma';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 /**
- * Returns a valid Google Calendar access token for the given user,
- * refreshing it if expired. Returns null if no token exists or refresh fails.
+ * Returns a valid Google Calendar access token for the given user
+ * by reading from the Auth.js Account table (provider: 'google').
+ * Refreshes the token if expired.
  */
 export async function getValidGcalToken(userId: string): Promise<string | null> {
-  const settings = await prisma.userSettings.findUnique({
-    where: { userId },
+  const account = await prisma.account.findFirst({
+    where: { userId, provider: 'google' },
     select: {
-      gcalAccessToken: true,
-      gcalRefreshToken: true,
-      gcalTokenExpiry: true,
+      access_token: true,
+      refresh_token: true,
+      expires_at: true,
     },
   });
 
-  if (!settings?.gcalAccessToken) return null;
+  if (!account?.access_token) return null;
 
-  // Token still valid — return it
-  if (settings.gcalTokenExpiry && settings.gcalTokenExpiry > new Date()) {
-    return settings.gcalAccessToken;
+  // Token still valid — expires_at is in seconds (epoch)
+  if (account.expires_at && account.expires_at > Math.floor(Date.now() / 1000)) {
+    return account.access_token;
   }
 
   // Token expired — try to refresh
-  if (!settings.gcalRefreshToken) return null;
+  if (!account.refresh_token) return null;
 
-  const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
+  const clientId = process.env.AUTH_GOOGLE_ID;
+  const clientSecret = process.env.AUTH_GOOGLE_SECRET;
   if (!clientId || !clientSecret) return null;
 
   try {
@@ -36,14 +37,14 @@ export async function getValidGcalToken(userId: string): Promise<string | null> 
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: settings.gcalRefreshToken,
+        refresh_token: account.refresh_token,
         client_id: clientId,
         client_secret: clientSecret,
       }),
     });
 
     if (!res.ok) {
-      console.error('Google Calendar token refresh failed:', await res.text());
+      console.error('Google token refresh failed:', await res.text());
       return null;
     }
 
@@ -51,17 +52,18 @@ export async function getValidGcalToken(userId: string): Promise<string | null> 
     const newAccessToken = data.access_token as string;
     const expiresIn = (data.expires_in as number) || 3600;
 
-    await prisma.userSettings.update({
-      where: { userId },
+    // Update the Account record with new token
+    await prisma.account.updateMany({
+      where: { userId, provider: 'google' },
       data: {
-        gcalAccessToken: newAccessToken,
-        gcalTokenExpiry: new Date(Date.now() + expiresIn * 1000),
+        access_token: newAccessToken,
+        expires_at: Math.floor(Date.now() / 1000) + expiresIn,
       },
     });
 
     return newAccessToken;
   } catch (err) {
-    console.error('Google Calendar token refresh error:', err);
+    console.error('Google token refresh error:', err);
     return null;
   }
 }

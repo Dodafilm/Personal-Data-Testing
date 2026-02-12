@@ -19,7 +19,7 @@ import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SleepOverlay from '@/components/charts/SleepOverlay';
 import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
-import { clearSampleData } from '@/lib/store';
+import { clearSampleData, saveSampleDays } from '@/lib/store';
 import dynamic from 'next/dynamic';
 import type { DayRecord, HealthEvent } from '@/lib/types';
 
@@ -97,25 +97,13 @@ export default function DashboardPage() {
         return;
       }
 
-      // Check current date range for existing data
-      const rangeResult = store.getDateRange(monthData.startStr, monthData.endStr);
-      const existing = rangeResult instanceof Promise ? await rangeResult : rangeResult;
-
-      // Load sample data for anonymous users if:
-      // - no data at all, OR
-      // - existing data is all sample-sourced but missing intraday fields (stale)
-      const needsSample = !session?.user && (
-        existing.length === 0 ||
-        (existing.every(d => d.source === 'sample') && !existing.some(d => d.heart?.samples?.length))
-      );
-
-      if (needsSample) {
+      // For anonymous users: always clear stale sample data and reload fresh
+      if (!session?.user) {
         clearSampleData();
         try {
           const res = await fetch('/data/sample-data.json');
           const sampleData: DayRecord[] = await res.json();
-          const saveResult = store.saveDays(sampleData);
-          if (saveResult instanceof Promise) await saveResult;
+          saveSampleDays(sampleData);
         } catch (err) {
           console.warn('Could not load sample data:', err);
         }
@@ -182,21 +170,18 @@ export default function DashboardPage() {
     updateSettings({ debugData: enabled });
 
     if (!enabled) {
-      // Clear sample data records
       clearSampleData();
     } else {
-      // Re-load sample data
       try {
         const res = await fetch('/data/sample-data.json');
         const sampleData: DayRecord[] = await res.json();
-        const saveResult = store.saveDays(sampleData);
-        if (saveResult instanceof Promise) await saveResult;
+        saveSampleDays(sampleData);
       } catch (err) {
         console.warn('Could not load sample data:', err);
       }
     }
     monthData.refresh();
-  }, [store, monthData, updateSettings]);
+  }, [monthData, updateSettings]);
 
   return (
     <>

@@ -21,6 +21,15 @@ export function saveDays(days: DayRecord[]) {
   }
 }
 
+/** Save sample days, skipping dates that already have real (non-sample) data. */
+export function saveSampleDays(days: DayRecord[]) {
+  for (const day of days) {
+    const existing = loadDay(day.date);
+    if (existing && existing.source && existing.source !== 'sample') continue;
+    saveDay(day);
+  }
+}
+
 export function loadDay(date: string): DayRecord | null {
   if (!isBrowser()) return null;
   const raw = localStorage.getItem(KEY_PREFIX + date);

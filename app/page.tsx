@@ -149,7 +149,11 @@ export default function DashboardPage() {
 
         <SyncPrompt />
 
-        <DayIntraday day={focusDayRecord} />
+        {/* Intraday 24h Section */}
+        <section className="metric-section">
+          <h2 className="section-title">24-Hour View</h2>
+          <DayIntraday day={focusDayRecord} />
+        </section>
 
         {/* Sleep Section */}
         <section className="metric-section">

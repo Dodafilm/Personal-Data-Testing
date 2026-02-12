@@ -26,6 +26,8 @@ export default function DayIntraday({ day }: DayIntradayProps) {
   return (
     <div className="day-intraday">
       <SleepHypnogramCard day={day} />
+      <HeartRateCard day={day} />
+      <ActivityCard day={day} />
     </div>
   );
 }
@@ -134,6 +136,173 @@ function SleepHypnogramCard({ day }: { day: DayRecord }) {
         <canvas ref={canvasRef} />
       ) : (
         <p className="overlay-fallback">Sleep hypnogram requires Oura Sleep scope</p>
+      )}
+    </div>
+  );
+}
+
+/* ---- Heart Rate (single day) ---- */
+function HeartRateCard({ day }: { day: DayRecord }) {
+  const config = useMemo((): ChartConfiguration | null => {
+    if (!day.heart?.samples || day.heart.samples.length === 0) return null;
+
+    const points = day.heart.samples.map(s => {
+      const dt = new Date(s.ts);
+      const hour = dt.getHours() + dt.getMinutes() / 60;
+      return { x: hour, y: s.bpm };
+    }).sort((a, b) => a.x - b.x);
+
+    return {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Heart Rate',
+          data: points,
+          borderColor: '#ff6b6b',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+        }],
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const item = items[0];
+                if (!item) return '';
+                return formatHour(item.parsed.x ?? 0);
+              },
+              label: (item) => `${item.parsed.y ?? 0} BPM`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: 24,
+            ticks: {
+              stepSize: 3,
+              callback: (val) => formatHour(val as number),
+              color: '#55556a',
+              font: { size: 10 },
+            },
+            title: { display: true, text: 'Time of Day', color: '#55556a' },
+            grid: { color: 'rgba(42, 42, 64, 0.5)' },
+          },
+          y: {
+            ticks: { color: '#55556a', font: { size: 10 } },
+            title: { display: true, text: 'BPM', color: '#55556a' },
+            grid: { color: 'rgba(42, 42, 64, 0.5)' },
+          },
+        },
+      },
+    };
+  }, [day]);
+
+  const canvasRef = useChart(config);
+
+  return (
+    <div className="overlay-chart-card">
+      <h3>Heart Rate</h3>
+      {config ? (
+        <canvas ref={canvasRef} />
+      ) : (
+        <p className="overlay-fallback">No heart rate samples for this day</p>
+      )}
+    </div>
+  );
+}
+
+/* ---- Activity (single day) ---- */
+function ActivityCard({ day }: { day: DayRecord }) {
+  const config = useMemo((): ChartConfiguration | null => {
+    const w = day.workout;
+    if (!w) return null;
+
+    let points: { x: number; y: number }[];
+    let yLabel: string;
+
+    if (w.met_items && w.met_items.length > 0 && w.met_timestamp) {
+      const mapped = mapToClockHours(w.met_items, w.met_timestamp, 5);
+      points = mapped.map(p => ({ x: p.hour, y: p.value }));
+      yLabel = 'MET';
+    } else if (w.class_5min) {
+      const phases = parsePipeString(w.class_5min);
+      const startOfDay = day.date + 'T00:00:00';
+      const mapped = mapToClockHours(phases, startOfDay, 5);
+      points = mapped.map(p => ({ x: p.hour, y: p.value }));
+      yLabel = 'Activity Class';
+    } else {
+      return null;
+    }
+
+    points.sort((a, b) => a.x - b.x);
+
+    return {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: 'Activity',
+          data: points,
+          borderColor: '#55efc4',
+          backgroundColor: 'rgba(85, 239, 196, 0.1)',
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: true,
+          tension: 0.3,
+        }],
+      },
+      options: {
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const item = items[0];
+                if (!item) return '';
+                return formatHour(item.parsed.x ?? 0);
+              },
+              label: (item) => `${(item.parsed.y ?? 0).toFixed(1)} ${yLabel}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: 24,
+            ticks: {
+              stepSize: 3,
+              callback: (val) => formatHour(val as number),
+              color: '#55556a',
+              font: { size: 10 },
+            },
+            title: { display: true, text: 'Time of Day', color: '#55556a' },
+            grid: { color: 'rgba(42, 42, 64, 0.5)' },
+          },
+          y: {
+            ticks: { color: '#55556a', font: { size: 10 } },
+            title: { display: true, text: yLabel, color: '#55556a' },
+            grid: { color: 'rgba(42, 42, 64, 0.5)' },
+          },
+        },
+      },
+    };
+  }, [day]);
+
+  const canvasRef = useChart(config);
+
+  return (
+    <div className="overlay-chart-card">
+      <h3>Activity</h3>
+      {config ? (
+        <canvas ref={canvasRef} />
+      ) : (
+        <p className="overlay-fallback">No intraday activity data for this day</p>
       )}
     </div>
   );

@@ -1346,6 +1346,9 @@ body {
   color: var(--text-secondary, #8888a0);
   margin-left: auto;
 }
+.event-popup-duration {
+  opacity: 0.7;
+}
 .event-popup-close {
   background: none;
   border: none;

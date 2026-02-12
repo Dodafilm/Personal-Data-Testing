@@ -8,8 +8,6 @@ const TOKEN_URL = 'https://oauth2.googleapis.com/token';
  * Refreshes the token if expired.
  */
 export async function getValidGcalToken(userId: string): Promise<string | null> {
-  console.log('[gcal-token] Looking up Google account for userId:', userId);
-
   const account = await prisma.account.findFirst({
     where: { userId, provider: 'google' },
     select: {
@@ -19,17 +17,7 @@ export async function getValidGcalToken(userId: string): Promise<string | null> 
     },
   });
 
-  if (!account) {
-    console.log('[gcal-token] No Google account found for this user');
-    return null;
-  }
-
-  if (!account.access_token) {
-    console.log('[gcal-token] Google account exists but access_token is null');
-    return null;
-  }
-
-  console.log('[gcal-token] Found account. expires_at:', account.expires_at, 'now:', Math.floor(Date.now() / 1000), 'has_refresh:', !!account.refresh_token);
+  if (!account?.access_token) return null;
 
   // Token still valid — expires_at is in seconds (epoch)
   if (account.expires_at && account.expires_at > Math.floor(Date.now() / 1000)) {

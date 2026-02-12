@@ -7,19 +7,14 @@ const CALENDAR_LIST_URL = 'https://www.googleapis.com/calendar/v3/users/me/calen
 
 export async function GET() {
   const session = await auth();
-  console.log('[gcal-calendars] session:', JSON.stringify({ user: session?.user, hasId: !!session?.user?.id }));
   if (!session?.user?.id) {
-    console.log('[gcal-calendars] 401: No session or missing user.id');
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
   const token = await getValidGcalToken(session.user.id);
   if (!token) {
-    console.log('[gcal-calendars] 401: getValidGcalToken returned null for userId:', session.user.id);
     return NextResponse.json({ error: 'Google Calendar not connected' }, { status: 401 });
   }
-
-  console.log('[gcal-calendars] Got valid token, fetching calendar list...');
 
   try {
     const res = await fetch(CALENDAR_LIST_URL, {

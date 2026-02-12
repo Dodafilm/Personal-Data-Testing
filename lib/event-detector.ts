@@ -34,7 +34,7 @@ export function detectWorkoutEvents(workout: WorkoutData | undefined, date: stri
             id: `auto-${date}-${timeStr}`,
             time: timeStr,
             title: isHigh ? 'High Intensity Activity' : 'Moderate Activity',
-            category: 'exercise',
+            category: 'activity',
             description: `${durationMin} min, peak ${peakMet.toFixed(1)} MET`,
             isAuto: true,
           });

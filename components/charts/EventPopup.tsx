@@ -1,7 +1,14 @@
 'use client';
 
-import type { HealthEvent } from '@/lib/types';
+import type { HealthEvent, EventCategory } from '@/lib/types';
 import { CATEGORY_COLORS } from './eventMarkerPlugin';
+
+const CATEGORY_LABELS: Record<EventCategory, string> = {
+  activity: 'Activity',
+  sleep: 'Sleep',
+  'health-note': 'Health Note',
+  custom: 'Calendar',
+};
 
 interface EventPopupProps {
   event: HealthEvent;
@@ -35,8 +42,18 @@ export default function EventPopup({ event, x, y, containerRect, onEdit, onDelet
       <div className="event-popup-overlay" onClick={onClose} />
       <div className="event-popup" style={{ left, top }}>
         <div className="event-popup-header">
-          <span className="event-category-badge" style={{ background: color }}>{event.category}</span>
-          <span className="event-popup-time">{event.time}</span>
+          <span className="event-category-badge" style={{ background: color }}>{CATEGORY_LABELS[event.category] || event.category}</span>
+          <span className="event-popup-time">
+            {event.time}
+            {event.endTime && ` – ${event.endTime}`}
+            {event.durationMin != null && (
+              <span className="event-popup-duration">
+                {event.durationMin >= 60
+                  ? ` (${Math.floor(event.durationMin / 60)}h${event.durationMin % 60 ? ` ${event.durationMin % 60}m` : ''})`
+                  : ` (${event.durationMin}m)`}
+              </span>
+            )}
+          </span>
           <button className="event-popup-close" onClick={onClose}>&times;</button>
         </div>
         <div className="event-popup-title">{event.title}</div>

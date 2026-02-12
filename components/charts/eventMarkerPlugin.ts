@@ -10,20 +10,16 @@ export interface MarkerHitbox {
 }
 
 const CATEGORY_COLORS: Record<EventCategory, string> = {
-  exercise: '#55efc4',
-  meal: '#ffeaa7',
-  medical: '#ff6b6b',
-  'sleep-aid': '#74b9ff',
-  note: '#a8a8c0',
+  activity: '#55efc4',
+  sleep: '#74b9ff',
+  'health-note': '#ff6b6b',
   custom: '#dfe6e9',
 };
 
 const CATEGORY_LETTERS: Record<EventCategory, string> = {
-  exercise: 'E',
-  meal: 'M',
-  medical: '+',
-  'sleep-aid': 'S',
-  note: 'N',
+  activity: 'A',
+  sleep: 'S',
+  'health-note': 'H',
   custom: 'C',
 };
 

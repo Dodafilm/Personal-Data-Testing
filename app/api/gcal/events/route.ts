@@ -65,6 +65,14 @@ export async function GET(request: Request) {
         const hours = String(startDt.getHours()).padStart(2, '0');
         const minutes = String(startDt.getMinutes()).padStart(2, '0');
 
+        let endTime: string | undefined;
+        let durationMin: number | undefined;
+        if (item.end?.dateTime) {
+          const endDt = new Date(item.end.dateTime);
+          endTime = `${String(endDt.getHours()).padStart(2, '0')}:${String(endDt.getMinutes()).padStart(2, '0')}`;
+          durationMin = Math.round((endDt.getTime() - startDt.getTime()) / 60000);
+        }
+
         events.push({
           id: `gcal-${item.id}`,
           time: `${hours}:${minutes}`,
@@ -73,6 +81,8 @@ export async function GET(request: Request) {
           description: item.description ? item.description.slice(0, 200) : undefined,
           color: item.colorId ? undefined : data.summary?.backgroundColor,
           isAuto: true,
+          endTime,
+          durationMin,
         });
       }
     } catch (err) {

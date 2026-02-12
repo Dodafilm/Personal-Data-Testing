@@ -55,7 +55,7 @@ export interface StressData {
   day_summary: string;      // "restored" | "normal" | "stressful"
 }
 
-export type EventCategory = 'exercise' | 'meal' | 'medical' | 'sleep-aid' | 'note' | 'custom';
+export type EventCategory = 'activity' | 'sleep' | 'health-note' | 'custom';
 
 export interface HealthEvent {
   id: string;
@@ -65,6 +65,8 @@ export interface HealthEvent {
   description?: string;
   color?: string;           // hex override (default from category)
   isAuto?: boolean;         // true = auto-detected, not stored in DB
+  endTime?: string;         // "HH:MM" (24h format)
+  durationMin?: number;     // duration in minutes
 }
 
 export interface DayRecord {

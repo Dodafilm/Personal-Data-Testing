@@ -62,9 +62,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+      }
+      // When signing in with Google, update the Account record with fresh tokens
+      // (Auth.js only writes tokens on first link, not on subsequent sign-ins)
+      if (account?.provider === 'google' && user?.id) {
+        await prisma.account.updateMany({
+          where: { userId: user.id, provider: 'google' },
+          data: {
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+          },
+        });
       }
       return token;
     },

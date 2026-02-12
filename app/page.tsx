@@ -116,6 +116,13 @@ export default function DashboardPage() {
           const sampleData: DayRecord[] = await res.json();
           const saveResult = store.saveDays(sampleData);
           if (saveResult instanceof Promise) await saveResult;
+
+          // Navigate to the most recent sample date so the 24-Hour View shows data
+          const lastDate = sampleData[sampleData.length - 1]?.date;
+          if (lastDate) {
+            const [y, m, d] = lastDate.split('-').map(Number);
+            monthData.setFullDate(y, m, d);
+          }
         } catch (err) {
           console.warn('Could not load sample data:', err);
         }

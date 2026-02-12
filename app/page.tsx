@@ -9,16 +9,11 @@ import { useOuraConnection } from '@/hooks/useOuraConnection';
 import DashboardHeader from '@/components/DashboardHeader';
 import SettingsPanel from '@/components/SettingsPanel';
 import DayDetail from '@/components/DayDetail';
-import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
-import WorkoutCharts from '@/components/charts/WorkoutCharts';
 import StressCharts from '@/components/charts/StressCharts';
-import SleepHeatmap from '@/components/charts/SleepHeatmap';
-import MetricHeatmap from '@/components/charts/MetricHeatmap';
 import DaySelector from '@/components/DaySelector';
 import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
-import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
 import type { DayRecord } from '@/lib/types';
@@ -46,6 +41,15 @@ export default function DashboardPage() {
       setFocusDay(null);
     }
   }, [monthData.data]);
+
+  // Handle date picker changing to a different year/month/day
+  const handleDateChange = useCallback((y: number, m: number, d: number) => {
+    if (y !== monthData.year || m !== monthData.month) {
+      monthData.setYear(y);
+      monthData.setMonth(m);
+    }
+    setFocusDay(d);
+  }, [monthData]);
 
   // Derive the focused day record
   const focusDayRecord = useMemo(() => {
@@ -162,31 +166,16 @@ export default function DashboardPage() {
           month={monthData.month}
           selectedDay={focusDay}
           onChange={setFocusDay}
-          data={monthData.data}
+          onDateChange={handleDateChange}
         />
 
         <DayIntraday day={focusDayRecord} />
-
-        {/* Sleep Section */}
-        <section className="metric-section">
-          <h2 className="section-title sleep">Sleep</h2>
-          <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <SleepHeatmap data={monthData.data} />
-        </section>
 
         {/* Heart Rate Section */}
         <section className="metric-section">
           <h2 className="section-title heart">Heart Rate</h2>
           <HeartCharts data={monthData.data} onDayClick={setSelectedDay} />
           <HeartRateOverlay data={monthData.data} />
-        </section>
-
-        {/* Workout Section */}
-        <section className="metric-section">
-          <h2 className="section-title workout">Workouts &amp; Activity</h2>
-          <WorkoutCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <MetricHeatmap data={monthData.data} />
-          <ActivityOverlay data={monthData.data} />
         </section>
 
         {/* Stress Section */}

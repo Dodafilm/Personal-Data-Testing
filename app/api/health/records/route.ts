@@ -57,6 +57,20 @@ export async function GET(request: Request) {
   return NextResponse.json(days);
 }
 
+// Shallow-merge two JSON objects: incoming fields overwrite existing,
+// but existing fields not present in incoming are preserved.
+function mergeJson(
+  existing: Prisma.InputJsonValue | null | undefined,
+  incoming: unknown,
+): Prisma.InputJsonValue | undefined {
+  if (!incoming) return (existing as Prisma.InputJsonValue) ?? undefined;
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+    return incoming as Prisma.InputJsonValue;
+  }
+  // Spread existing under incoming so incoming wins but existing keys are kept
+  return { ...(existing as Record<string, unknown>), ...(incoming as Record<string, unknown>) } as Prisma.InputJsonValue;
+}
+
 // Merge incoming data with existing record so we never overwrite
 // one category's data when saving another.
 async function mergedUpsert(userId: string, day: DayRecord) {
@@ -65,10 +79,10 @@ async function mergedUpsert(userId: string, day: DayRecord) {
   });
 
   const merged = {
-    sleep: toJson(day.sleep) ?? (existing?.sleep as Prisma.InputJsonValue) ?? undefined,
-    heart: toJson(day.heart) ?? (existing?.heart as Prisma.InputJsonValue) ?? undefined,
-    workout: toJson(day.workout) ?? (existing?.workout as Prisma.InputJsonValue) ?? undefined,
-    stress: toJson(day.stress) ?? (existing?.stress as Prisma.InputJsonValue) ?? undefined,
+    sleep: mergeJson(existing?.sleep as Prisma.InputJsonValue, day.sleep),
+    heart: mergeJson(existing?.heart as Prisma.InputJsonValue, day.heart),
+    workout: mergeJson(existing?.workout as Prisma.InputJsonValue, day.workout),
+    stress: mergeJson(existing?.stress as Prisma.InputJsonValue, day.stress),
   };
 
   await prisma.healthRecord.upsert({

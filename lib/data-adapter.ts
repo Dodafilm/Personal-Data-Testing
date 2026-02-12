@@ -75,7 +75,7 @@ export function normalizeOuraHeartRate(apiData: { data?: Array<Record<string, un
       hrv_avg: vals.hrv.length ? Math.round(avg(vals.hrv)) : 0,
       hr_min: vals.bpms.length ? Math.min(...vals.bpms) : 0,
       hr_max: vals.bpms.length ? Math.max(...vals.bpms) : 0,
-      samples: vals.samples.length ? vals.samples : undefined,
+      samples: vals.samples.length ? downsampleTimeSeries(vals.samples, 300) : undefined,
     },
   }));
 }
@@ -209,6 +209,39 @@ function downsampleMet(met: unknown): number[] | undefined {
   for (let i = 0; i < obj.items.length; i += bucketSize) {
     const slice = obj.items.slice(i, i + bucketSize);
     result.push(slice.reduce((s, v) => s + v, 0) / slice.length);
+  }
+  return result;
+}
+
+/** Downsample timestamped BPM readings into buckets of `intervalSec` seconds.
+ *  Keeps one averaged reading per bucket to reduce payload size. */
+function downsampleTimeSeries(
+  samples: { ts: string; bpm: number }[],
+  intervalSec: number,
+): { ts: string; bpm: number }[] {
+  if (samples.length === 0) return samples;
+  const sorted = [...samples].sort((a, b) => a.ts.localeCompare(b.ts));
+  const result: { ts: string; bpm: number }[] = [];
+  let bucketStart = new Date(sorted[0].ts).getTime();
+  let bucketBpms: number[] = [];
+  let bucketTs = sorted[0].ts;
+
+  for (const s of sorted) {
+    const t = new Date(s.ts).getTime();
+    if (t - bucketStart >= intervalSec * 1000) {
+      // Flush current bucket
+      if (bucketBpms.length) {
+        result.push({ ts: bucketTs, bpm: Math.round(bucketBpms.reduce((a, b) => a + b, 0) / bucketBpms.length) });
+      }
+      bucketStart = t;
+      bucketBpms = [];
+      bucketTs = s.ts;
+    }
+    bucketBpms.push(s.bpm);
+  }
+  // Flush last bucket
+  if (bucketBpms.length) {
+    result.push({ ts: bucketTs, bpm: Math.round(bucketBpms.reduce((a, b) => a + b, 0) / bucketBpms.length) });
   }
   return result;
 }

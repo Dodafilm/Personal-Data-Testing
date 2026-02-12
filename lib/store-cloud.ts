@@ -11,11 +11,16 @@ export async function cloudSaveDay(day: DayRecord): Promise<void> {
 }
 
 export async function cloudSaveDays(days: DayRecord[]): Promise<void> {
-  await fetch('/api/health/records', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ records: days }),
-  });
+  // Batch into chunks of 5 days to stay under Vercel's body size limit
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < days.length; i += BATCH_SIZE) {
+    const batch = days.slice(i, i + BATCH_SIZE);
+    await fetch('/api/health/records', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records: batch }),
+    });
+  }
 }
 
 export async function cloudGetMonthData(year: number, month: number): Promise<DayRecord[]> {

@@ -52,6 +52,7 @@ export async function GET(request: Request) {
     heart: r.heart as unknown as DayRecord['heart'],
     workout: r.workout as unknown as DayRecord['workout'],
     stress: r.stress as unknown as DayRecord['stress'],
+    events: r.events as unknown as DayRecord['events'],
   }));
 
   return NextResponse.json(days);
@@ -95,6 +96,11 @@ async function mergedUpsert(userId: string, day: DayRecord) {
     stress: mergeJson(existing?.stress as Prisma.InputJsonValue, day.stress),
   };
 
+  // Events use replace strategy (full array from client)
+  const events = day.events !== undefined
+    ? toJson(day.events)
+    : (existing?.events as Prisma.InputJsonValue) ?? undefined;
+
   await prisma.healthRecord.upsert({
     where: { userId_date: { userId, date: day.date } },
     create: {
@@ -105,6 +111,7 @@ async function mergedUpsert(userId: string, day: DayRecord) {
       heart: merged.heart,
       workout: merged.workout,
       stress: merged.stress,
+      events,
     },
     update: {
       source: day.source ?? undefined,
@@ -112,6 +119,7 @@ async function mergedUpsert(userId: string, day: DayRecord) {
       heart: merged.heart,
       workout: merged.workout,
       stress: merged.stress,
+      events,
     },
   });
 }

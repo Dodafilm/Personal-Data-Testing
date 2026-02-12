@@ -1,10 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart } from './useChart';
 import { parsePipeString, mapToClockHours, formatHour } from '@/lib/intraday-utils';
-import type { DayRecord } from '@/lib/types';
+import { detectWorkoutEvents } from '@/lib/event-detector';
+import { createEventMarkerPlugin, type MarkerHitbox } from './eventMarkerPlugin';
+import EventPopup from './EventPopup';
+import EventForm from './EventForm';
+import { useStore } from '@/lib/store-provider';
+import type { DayRecord, HealthEvent } from '@/lib/types';
 
 const STAGE_LABELS: Record<number, string> = { 1: 'Deep', 2: 'Light', 3: 'REM', 4: 'Awake' };
 
@@ -13,16 +18,49 @@ type ViewMode = 'full' | 'sleep-effector';
 interface DayIntradayProps {
   day: DayRecord | null;
   prevDay?: DayRecord | null;
+  onDayUpdated?: () => void;
 }
 
-export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
+export default function DayIntraday({ day, prevDay, onDayUpdated }: DayIntradayProps) {
+  const store = useStore();
   const [showSleep, setShowSleep] = useState(true);
   const [showHeart, setShowHeart] = useState(true);
   const [showActivity, setShowActivity] = useState(true);
   const [startHour, setStartHour] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('full');
 
+  // Event state
+  const [activePopup, setActivePopup] = useState<{ event: HealthEvent; x: number; y: number } | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<HealthEvent | null>(null);
+
+  const markerHitboxes = useRef<MarkerHitbox[]>([]);
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const effectiveStart = viewMode === 'sleep-effector' ? 8 : startHour;
+
+  // Compute combined events (manual + auto-detected)
+  const allEvents = useMemo(() => {
+    if (!day) return [];
+    const manual = day.events || [];
+    const autoCurrent = detectWorkoutEvents(day.workout, day.date);
+
+    if (viewMode === 'sleep-effector' && prevDay) {
+      const autoPrev = detectWorkoutEvents(prevDay.workout, prevDay.date);
+      // For sleep effector: prev day events from 8:00+ and current day events
+      const prevManual = (prevDay.events || []).filter(e => {
+        const h = parseInt(e.time.split(':')[0], 10);
+        return h >= 8;
+      });
+      const prevAuto = autoPrev.filter(e => {
+        const h = parseInt(e.time.split(':')[0], 10);
+        return h >= 8;
+      });
+      return [...prevManual, ...prevAuto, ...manual, ...autoCurrent];
+    }
+
+    return [...manual, ...autoCurrent];
+  }, [day, prevDay, viewMode]);
 
   // Check data availability depending on mode
   const hasSleep = !!(day?.sleep?.phases_5min && day?.sleep?.bedtime_start);
@@ -41,6 +79,9 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
         day.workout.class_5min
       ));
 
+  // Create plugin instance (stable ref)
+  const eventMarkerPlugin = useMemo(() => createEventMarkerPlugin(markerHitboxes), []);
+
   const config = useMemo((): ChartConfiguration | null => {
     if (!day) return null;
     if (!showSleep && !showHeart && !showActivity) return null;
@@ -56,7 +97,6 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
       const shifted = points.map(p => {
         let x = p.hour;
         if (viewMode === 'sleep-effector') {
-          // Evening hours (>=12) stay as-is, morning hours (<12) shift +24
           if (x < 12) x += 24;
         } else {
           while (x < effectiveStart) x += 24;
@@ -83,12 +123,10 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
       let points: { x: number; y: number }[];
 
       if (viewMode === 'sleep-effector') {
-        // Previous day samples: hours stay as-is (8-24 range)
         const prev = (prevDay?.heart?.samples || []).map(s => {
           const dt = new Date(s.ts);
           return { x: dt.getHours() + dt.getMinutes() / 60, y: s.bpm };
         });
-        // Current day samples: hours + 24 (0-8 → 24-32)
         const curr = (day?.heart?.samples || []).map(s => {
           const dt = new Date(s.ts);
           return { x: dt.getHours() + dt.getMinutes() / 60 + 24, y: s.bpm };
@@ -125,9 +163,7 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
       let points: { x: number; y: number }[] = [];
 
       if (viewMode === 'sleep-effector') {
-        // Previous day activity: hours as-is
         const prevPts = getActivityPoints(prevDay, 0);
-        // Current day activity: hours + 24
         const currPts = getActivityPoints(day, 24);
         points = [...prevPts, ...currPts]
           .filter(p => p.x >= 8 && p.x < 32)
@@ -238,6 +274,9 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
       type: 'line',
       data: { datasets },
       options: {
+        layout: {
+          padding: { top: 24 },
+        },
         interaction: {
           mode: 'nearest',
           intersect: false,
@@ -261,13 +300,72 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
               },
             },
           },
+          // Pass events to the marker plugin via config
+          eventMarkers: {
+            events: allEvents,
+            effectiveStart,
+          },
         },
         scales,
       },
+      plugins: [eventMarkerPlugin],
     };
-  }, [day, prevDay, showSleep, showHeart, showActivity, effectiveStart, startHour, viewMode, hasSleep, hasHeart, hasActivity]);
+  }, [day, prevDay, showSleep, showHeart, showActivity, effectiveStart, startHour, viewMode, hasSleep, hasHeart, hasActivity, allEvents, eventMarkerPlugin]);
 
   const canvasRef = useChart(config);
+
+  // Click handler for event markers
+  const handleCanvasClick = useCallback((e: MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    for (const hb of markerHitboxes.current) {
+      if (cx >= hb.x && cx <= hb.x + hb.width && cy >= hb.top && cy <= hb.bottom) {
+        setActivePopup({ event: hb.event, x: e.clientX, y: e.clientY });
+        return;
+      }
+    }
+    setActivePopup(null);
+  }, [canvasRef]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('click', handleCanvasClick);
+    return () => canvas.removeEventListener('click', handleCanvasClick);
+  }, [canvasRef, handleCanvasClick]);
+
+  // Save event handler
+  const handleSaveEvent = useCallback(async (event: HealthEvent) => {
+    if (!day) return;
+    const existingEvents = day.events || [];
+    const idx = existingEvents.findIndex(e => e.id === event.id);
+    const updatedEvents = idx >= 0
+      ? existingEvents.map((e, i) => i === idx ? event : e)
+      : [...existingEvents, event];
+
+    const updatedDay: DayRecord = { ...day, events: updatedEvents };
+    const result = store.saveDay(updatedDay);
+    if (result instanceof Promise) await result;
+    setShowForm(false);
+    setEditingEvent(null);
+    setActivePopup(null);
+    onDayUpdated?.();
+  }, [day, store, onDayUpdated]);
+
+  // Delete event handler
+  const handleDeleteEvent = useCallback(async (id: string) => {
+    if (!day) return;
+    const updatedEvents = (day.events || []).filter(e => e.id !== id);
+    const updatedDay: DayRecord = { ...day, events: updatedEvents };
+    const result = store.saveDay(updatedDay);
+    if (result instanceof Promise) await result;
+    setActivePopup(null);
+    onDayUpdated?.();
+  }, [day, store, onDayUpdated]);
 
   if (!day) {
     return (
@@ -283,7 +381,7 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
 
   return (
     <div className="day-intraday">
-      <div className="overlay-chart-card">
+      <div className="overlay-chart-card" ref={cardRef} style={{ position: 'relative' }}>
         <div className="intraday-header">
           <h3>24-Hour View</h3>
           <select
@@ -316,6 +414,13 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
             >
               Activity
             </button>
+            <button
+              className="intraday-add-btn"
+              onClick={() => { setShowForm(true); setEditingEvent(null); }}
+              title="Add event marker"
+            >
+              +
+            </button>
           </div>
           {viewMode === 'full' && (
             <label className="hypnogram-start-label">
@@ -332,10 +437,35 @@ export default function DayIntraday({ day, prevDay }: DayIntradayProps) {
             </label>
           )}
         </div>
+
+        {showForm && (
+          <EventForm
+            initial={editingEvent}
+            onSave={handleSaveEvent}
+            onCancel={() => { setShowForm(false); setEditingEvent(null); }}
+          />
+        )}
+
         {hasAnyData && config ? (
           <canvas ref={canvasRef} />
         ) : (
           <p className="overlay-fallback">No intraday data for this day</p>
+        )}
+
+        {activePopup && cardRef.current && (
+          <EventPopup
+            event={activePopup.event}
+            x={activePopup.x}
+            y={activePopup.y}
+            containerRect={cardRef.current.getBoundingClientRect()}
+            onEdit={() => {
+              setEditingEvent(activePopup.event);
+              setShowForm(true);
+              setActivePopup(null);
+            }}
+            onDelete={() => handleDeleteEvent(activePopup.event.id)}
+            onClose={() => setActivePopup(null)}
+          />
         )}
       </div>
     </div>

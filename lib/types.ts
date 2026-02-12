@@ -55,6 +55,18 @@ export interface StressData {
   day_summary: string;      // "restored" | "normal" | "stressful"
 }
 
+export type EventCategory = 'exercise' | 'meal' | 'medical' | 'sleep-aid' | 'note' | 'custom';
+
+export interface HealthEvent {
+  id: string;
+  time: string;             // "HH:MM" (24h format)
+  title: string;
+  category: EventCategory;
+  description?: string;
+  color?: string;           // hex override (default from category)
+  isAuto?: boolean;         // true = auto-detected, not stored in DB
+}
+
 export interface DayRecord {
   date: string;
   source?: string;
@@ -62,6 +74,7 @@ export interface DayRecord {
   heart?: HeartData;
   workout?: WorkoutData;
   stress?: StressData;
+  events?: HealthEvent[];
 }
 
 export interface Settings {

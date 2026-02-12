@@ -1296,6 +1296,182 @@ body {
 .hypnogram-start-input { width: 48px; padding: 4px 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 0.8rem; text-align: center; }
 .hypnogram-start-input:focus { outline: none; border-color: var(--accent-primary); }
 
+/* Event marker add button */
+.intraday-add-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid var(--text-muted);
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  line-height: 1;
+}
+.intraday-add-btn:hover {
+  opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+
+/* Event popup overlay */
+.event-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
+/* Event popup */
+.event-popup {
+  position: absolute;
+  z-index: 50;
+  width: 240px;
+  background: var(--bg-card, #1a1a2e);
+  border: 1px solid var(--border, #2a2a40);
+  border-radius: var(--radius-sm, 8px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.event-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.event-popup-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #8888a0);
+  margin-left: auto;
+}
+.event-popup-close {
+  background: none;
+  border: none;
+  color: var(--text-muted, #55556a);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.event-popup-close:hover { color: var(--text-primary); }
+.event-popup-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary, #e8e8f0);
+}
+.event-popup-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #8888a0);
+}
+.event-auto-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(85, 239, 196, 0.15);
+  color: #55efc4;
+  width: fit-content;
+}
+.event-popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.event-popup-actions button {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border, #2a2a40);
+  background: var(--bg-input, #12121e);
+  color: var(--text-primary, #e8e8f0);
+  transition: background 0.15s;
+}
+.event-popup-actions button:hover { background: rgba(255,255,255,0.08); }
+.event-popup-delete { color: #ff6b6b !important; border-color: rgba(255,107,107,0.3) !important; }
+.event-popup-delete:hover { background: rgba(255,107,107,0.15) !important; }
+
+/* Event category badge */
+.event-category-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  text-transform: capitalize;
+}
+
+/* Event form */
+.event-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border, #2a2a40);
+  border-radius: var(--radius-sm, 8px);
+  background: rgba(18, 18, 30, 0.6);
+}
+.event-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #8888a0);
+  font-weight: 600;
+}
+.event-form-optional { font-weight: 400; opacity: 0.6; }
+.event-form-row {
+  display: flex;
+  gap: 12px;
+}
+.event-form-row label { flex: 1; }
+.event-form input,
+.event-form select {
+  padding: 6px 8px;
+  background: var(--bg-input, #12121e);
+  border: 1px solid var(--border, #2a2a40);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-primary, #e8e8f0);
+  font-size: 0.82rem;
+}
+.event-form input:focus,
+.event-form select:focus {
+  outline: none;
+  border-color: var(--accent-primary, #74b9ff);
+}
+.event-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.event-form-save,
+.event-form-cancel {
+  padding: 6px 16px;
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border, #2a2a40);
+  transition: background 0.15s;
+}
+.event-form-save {
+  background: var(--accent-primary, #74b9ff);
+  color: #1a1a2e;
+  border-color: transparent;
+}
+.event-form-save:hover { opacity: 0.9; }
+.event-form-cancel {
+  background: transparent;
+  color: var(--text-secondary, #8888a0);
+}
+.event-form-cancel:hover { background: rgba(255,255,255,0.06); }
+
 /* Stress gauge */
 .stress-gauge { display: flex; height: 32px; border-radius: var(--radius-sm); overflow: hidden; margin-top: 8px; }
 .stress-gauge-segment { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; min-width: 40px; }

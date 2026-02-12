@@ -162,7 +162,7 @@ export default function DashboardPage() {
         {/* Intraday 24h Section */}
         <section className="metric-section">
           <h2 className="section-title">24-Hour View</h2>
-          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} />
+          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} onDayUpdated={monthData.refresh} />
         </section>
 
         {/* Sleep Section */}

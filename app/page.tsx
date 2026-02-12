@@ -88,9 +88,12 @@ export default function DashboardPage() {
     if (sessionStatus === 'loading') return;
 
     async function init() {
+      console.log('[init] sessionStatus:', sessionStatus, 'user:', session?.user, 'range:', monthData.startStr, '-', monthData.endStr);
+
       // Check persisted debugData setting (default true for first-time anon)
       const savedSettings = store.loadSettings();
       const saved = savedSettings instanceof Promise ? await savedSettings : savedSettings;
+      console.log('[init] debugData setting:', saved.debugData);
       if (saved.debugData === false) {
         setDebugData(false);
         monthData.refresh();
@@ -103,7 +106,17 @@ export default function DashboardPage() {
         try {
           const res = await fetch('/data/sample-data.json');
           const sampleData: DayRecord[] = await res.json();
+          console.log('[init] loaded sample data:', sampleData.length, 'days, first:', sampleData[0]?.date, 'last:', sampleData[sampleData.length-1]?.date);
           saveSampleDays(sampleData);
+
+          // Verify it saved
+          const verify = store.getDateRange(monthData.startStr, monthData.endStr);
+          const verifyData = verify instanceof Promise ? await verify : verify;
+          console.log('[init] after save, store has', verifyData.length, 'days in range');
+          if (verifyData.length > 0) {
+            const last = verifyData[verifyData.length - 1];
+            console.log('[init] last day:', last.date, 'has samples:', last.heart?.samples?.length ?? 0, 'has phases:', !!last.sleep?.phases_5min);
+          }
         } catch (err) {
           console.warn('Could not load sample data:', err);
         }

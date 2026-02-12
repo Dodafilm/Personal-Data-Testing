@@ -16,7 +16,6 @@ import StressCharts from '@/components/charts/StressCharts';
 import SleepHeatmap from '@/components/charts/SleepHeatmap';
 import MetricHeatmap from '@/components/charts/MetricHeatmap';
 import CalendarDayPicker from '@/components/CalendarDayPicker';
-import SleepOverlay from '@/components/charts/SleepOverlay';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
@@ -166,7 +165,6 @@ export default function DashboardPage() {
           <h2 className="section-title sleep">Sleep</h2>
           <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
           <SleepHeatmap data={filteredData} />
-          <SleepOverlay data={monthData.data} />
         </section>
 
         {/* Heart Rate Section */}

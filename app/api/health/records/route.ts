@@ -57,16 +57,39 @@ export async function GET(request: Request) {
   return NextResponse.json(days);
 }
 
-// Build an update object with only the fields that have actual data,
-// so we never accidentally overwrite existing categories with null.
-function buildUpdate(day: DayRecord) {
-  const update: Record<string, unknown> = {};
-  if (day.source) update.source = day.source;
-  if (day.sleep) update.sleep = toJson(day.sleep);
-  if (day.heart) update.heart = toJson(day.heart);
-  if (day.workout) update.workout = toJson(day.workout);
-  if (day.stress) update.stress = toJson(day.stress);
-  return update;
+// Merge incoming data with existing record so we never overwrite
+// one category's data when saving another.
+async function mergedUpsert(userId: string, day: DayRecord) {
+  const existing = await prisma.healthRecord.findUnique({
+    where: { userId_date: { userId, date: day.date } },
+  });
+
+  const merged = {
+    sleep: toJson(day.sleep) ?? (existing?.sleep as Prisma.InputJsonValue) ?? undefined,
+    heart: toJson(day.heart) ?? (existing?.heart as Prisma.InputJsonValue) ?? undefined,
+    workout: toJson(day.workout) ?? (existing?.workout as Prisma.InputJsonValue) ?? undefined,
+    stress: toJson(day.stress) ?? (existing?.stress as Prisma.InputJsonValue) ?? undefined,
+  };
+
+  await prisma.healthRecord.upsert({
+    where: { userId_date: { userId, date: day.date } },
+    create: {
+      userId,
+      date: day.date,
+      source: day.source ?? null,
+      sleep: merged.sleep,
+      heart: merged.heart,
+      workout: merged.workout,
+      stress: merged.stress,
+    },
+    update: {
+      source: day.source ?? undefined,
+      sleep: merged.sleep,
+      heart: merged.heart,
+      workout: merged.workout,
+      stress: merged.stress,
+    },
+  });
 }
 
 // POST /api/health/records — upsert a single day
@@ -81,19 +104,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'date is required' }, { status: 400 });
   }
 
-  await prisma.healthRecord.upsert({
-    where: { userId_date: { userId: session.user.id, date: day.date } },
-    create: {
-      userId: session.user.id,
-      date: day.date,
-      source: day.source ?? null,
-      sleep: toJson(day.sleep),
-      heart: toJson(day.heart),
-      workout: toJson(day.workout),
-      stress: toJson(day.stress),
-    },
-    update: buildUpdate(day),
-  });
+  await mergedUpsert(session.user.id, day);
 
   return NextResponse.json({ ok: true });
 }
@@ -113,19 +124,7 @@ export async function PUT(request: Request) {
   let count = 0;
   for (const day of records) {
     if (!day.date) continue;
-    await prisma.healthRecord.upsert({
-      where: { userId_date: { userId: session.user.id, date: day.date } },
-      create: {
-        userId: session.user.id,
-        date: day.date,
-        source: day.source ?? null,
-        sleep: toJson(day.sleep),
-        heart: toJson(day.heart),
-        workout: toJson(day.workout),
-        stress: toJson(day.stress),
-      },
-      update: buildUpdate(day),
-    });
+    await mergedUpsert(session.user.id, day);
     count++;
   }
 

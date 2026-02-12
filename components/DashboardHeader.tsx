@@ -7,17 +7,61 @@ interface DashboardHeaderProps {
   onPrev: () => void;
   onNext: () => void;
   onSettingsToggle: () => void;
+  year: number;
+  month: number;
+  selectedDay: number | null;
+  onDateChange: (year: number, month: number, day: number) => void;
 }
 
-export default function DashboardHeader({ label, onPrev, onNext, onSettingsToggle }: DashboardHeaderProps) {
+export default function DashboardHeader({
+  label,
+  onPrev,
+  onNext,
+  onSettingsToggle,
+  year,
+  month,
+  selectedDay,
+  onDateChange,
+}: DashboardHeaderProps) {
+  const dateValue = selectedDay
+    ? `${year}-${String(month).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+    : '';
+
+  const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m, d] = val.split('-').map(Number);
+    onDateChange(y, m, d);
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    onDateChange(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  };
+
   return (
     <header className="dash-header">
-      <h1 className="logo">Health Analytics</h1>
-      <div className="month-nav">
-        <button className="icon-btn" aria-label="Previous month" onClick={onPrev}>&larr;</button>
-        <span className="month-label">{label}</span>
-        <button className="icon-btn" aria-label="Next month" onClick={onNext}>&rarr;</button>
+      <h1 className="logo">Voyage Analytics</h1>
+
+      <div className="header-center">
+        <div className="month-nav">
+          <button className="icon-btn" aria-label="Previous month" onClick={onPrev}>&larr;</button>
+          <span className="month-label">{label}</span>
+          <button className="icon-btn" aria-label="Next month" onClick={onNext}>&rarr;</button>
+        </div>
+        <div className="header-date-picker">
+          <input
+            type="date"
+            className="day-picker-input"
+            value={dateValue}
+            onChange={handleDateInput}
+          />
+          <button className="btn btn-secondary header-today-btn" onClick={handleToday}>
+            Today
+          </button>
+        </div>
       </div>
+
       <div className="header-actions">
         <button className="icon-btn" aria-label="Settings" onClick={onSettingsToggle}>&#9881;</button>
         <UserMenu />

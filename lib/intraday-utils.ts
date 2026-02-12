@@ -1,6 +1,12 @@
-/** Split an Oura pipe-separated string like "1|2|3|4" into number[] */
+/** Parse an Oura phase string into number[].
+ *  Handles both pipe-separated ("1|2|3|4") and continuous digit ("1234") formats.
+ */
 export function parsePipeString(str: string): number[] {
-  return str.split('|').map(Number);
+  if (str.includes('|')) {
+    return str.split('|').map(Number);
+  }
+  // Continuous digit string — each character is a single value
+  return Array.from(str, ch => Number(ch));
 }
 
 /** Map interval-based values to decimal clock hours starting from a timestamp.

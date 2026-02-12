@@ -25,85 +25,8 @@ export default function DayIntraday({ day }: DayIntradayProps) {
 
   return (
     <div className="day-intraday">
-      <HeartRateCard day={day} />
       <SleepHypnogramCard day={day} />
       <StressGaugeCard day={day} />
-    </div>
-  );
-}
-
-/* ---- Heart Rate 24h ---- */
-function HeartRateCard({ day }: { day: DayRecord }) {
-  const config = useMemo((): ChartConfiguration | null => {
-    if (!day.heart?.samples || day.heart.samples.length === 0) return null;
-
-    const points = day.heart.samples.map(s => {
-      const dt = new Date(s.ts);
-      const hour = dt.getHours() + dt.getMinutes() / 60;
-      return { x: hour, y: s.bpm };
-    }).sort((a, b) => a.x - b.x);
-
-    return {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'Heart Rate',
-          data: points,
-          borderColor: '#ff6b6b',
-          borderWidth: 2,
-          pointRadius: 0,
-          fill: false,
-          tension: 0.3,
-        }],
-      },
-      options: {
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const item = items[0];
-                if (!item) return '';
-                return formatHour(item.parsed.x ?? 0);
-              },
-              label: (item) => `${item.parsed.y ?? 0} BPM`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            type: 'linear',
-            min: 0,
-            max: 24,
-            ticks: {
-              stepSize: 3,
-              callback: (val) => formatHour(val as number),
-              color: '#55556a',
-              font: { size: 10 },
-            },
-            title: { display: true, text: 'Time of Day', color: '#55556a' },
-            grid: { color: 'rgba(42, 42, 64, 0.5)' },
-          },
-          y: {
-            ticks: { color: '#55556a', font: { size: 10 } },
-            title: { display: true, text: 'BPM', color: '#55556a' },
-            grid: { color: 'rgba(42, 42, 64, 0.5)' },
-          },
-        },
-      },
-    };
-  }, [day]);
-
-  const canvasRef = useChart(config);
-
-  return (
-    <div className="overlay-chart-card">
-      <h3>Heart Rate (24h)</h3>
-      {config ? (
-        <canvas ref={canvasRef} />
-      ) : (
-        <p className="overlay-fallback">No heart rate samples for this day</p>
-      )}
     </div>
   );
 }

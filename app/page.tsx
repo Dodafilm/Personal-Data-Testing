@@ -12,7 +12,7 @@ import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import StressCharts from '@/components/charts/StressCharts';
-import DaySelector from '@/components/DaySelector';
+
 import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
@@ -158,17 +158,13 @@ export default function DashboardPage() {
           onPrev={monthData.prevMonth}
           onNext={monthData.nextMonth}
           onSettingsToggle={() => setSettingsOpen(o => !o)}
-        />
-
-        <SyncPrompt />
-
-        <DaySelector
           year={monthData.year}
           month={monthData.month}
           selectedDay={focusDay}
-          onChange={setFocusDay}
           onDateChange={handleDateChange}
         />
+
+        <SyncPrompt />
 
         <DayIntraday day={focusDayRecord} />
 

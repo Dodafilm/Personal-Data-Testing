@@ -15,6 +15,7 @@ import StressCharts from '@/components/charts/StressCharts';
 import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import ActivityOverlay from '@/components/charts/ActivityOverlay';
+import SleepOverlay from '@/components/charts/SleepOverlay';
 import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
 import dynamic from 'next/dynamic';
@@ -154,6 +155,7 @@ export default function DashboardPage() {
         <section className="metric-section">
           <h2 className="section-title sleep">Sleep</h2>
           <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
+          <SleepOverlay data={monthData.data} />
         </section>
 
         {/* Heart Rate Section */}

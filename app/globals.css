@@ -1321,6 +1321,20 @@ body {
   font-size: 0.8rem;
 }
 
+/* ===== Day Intraday section ===== */
+.day-intraday { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+
+/* Stress gauge */
+.stress-gauge { display: flex; height: 32px; border-radius: var(--radius-sm); overflow: hidden; margin-top: 8px; }
+.stress-gauge-segment { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; min-width: 40px; }
+.stress-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; margin-top: 8px; }
+.stress-badge.restored { background: rgba(85,239,196,0.2); color: #55efc4; }
+.stress-badge.normal { background: rgba(116,185,255,0.2); color: #74b9ff; }
+.stress-badge.stressful { background: rgba(255,165,0,0.2); color: #ffa500; }
+
+/* Has-data dot for day selector */
+.day-picker-btn.has-data::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--accent-primary); margin:2px auto 0; }
+
 /* ===== Responsive additions ===== */
 @media (max-width: 768px) {
   .auth-card {

@@ -3,7 +3,6 @@
 import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart, useChartWithClick, getDayLabels } from './useChart';
-import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface SleepChartsProps {
@@ -12,22 +11,6 @@ interface SleepChartsProps {
 }
 
 export default function SleepCharts({ data, onDayClick }: SleepChartsProps) {
-  const stats = useMemo(() => {
-    if (!data.length) return [];
-    const vals = data.map(d => d.sleep).filter(Boolean);
-    if (!vals.length) return [];
-    const avgDuration = (vals.reduce((s, v) => s + (v!.duration_hours || 0), 0) / vals.length).toFixed(1);
-    const avgEfficiency = Math.round(vals.reduce((s, v) => s + (v!.efficiency || 0), 0) / vals.length);
-    const avgReadiness = Math.round(vals.reduce((s, v) => s + (v!.readiness_score || 0), 0) / vals.length);
-    const avgDeep = Math.round(vals.reduce((s, v) => s + (v!.deep_min || 0), 0) / vals.length);
-    return [
-      { value: `${avgDuration}h`, label: 'Avg Duration' },
-      { value: `${avgEfficiency}%`, label: 'Avg Efficiency' },
-      { value: `${avgReadiness}`, label: 'Avg Readiness' },
-      { value: `${avgDeep}m`, label: 'Avg Deep Sleep' },
-    ];
-  }, [data]);
-
   const stagesConfig = useMemo((): ChartConfiguration | null => {
     if (!data.length) return null;
     const labels = getDayLabels(data);
@@ -107,9 +90,7 @@ export default function SleepCharts({ data, onDayClick }: SleepChartsProps) {
   const readinessRef = useChart(readinessConfig);
 
   return (
-    <>
-      <StatsRow stats={stats} colorClass="sleep" emptyMessage="No sleep data for this month" />
-      <div className="charts-grid">
+    <div className="charts-grid">
         <div className="chart-card">
           <h3>Sleep Stages</h3>
           <canvas ref={stagesRef} />
@@ -122,7 +103,6 @@ export default function SleepCharts({ data, onDayClick }: SleepChartsProps) {
           <h3>Readiness Score</h3>
           <canvas ref={readinessRef} />
         </div>
-      </div>
-    </>
+    </div>
   );
 }

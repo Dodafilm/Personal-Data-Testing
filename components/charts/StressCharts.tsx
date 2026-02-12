@@ -3,7 +3,6 @@
 import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart, useChartWithClick, getDayLabels } from './useChart';
-import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface StressChartsProps {
@@ -12,22 +11,6 @@ interface StressChartsProps {
 }
 
 export default function StressCharts({ data, onDayClick }: StressChartsProps) {
-  const stats = useMemo(() => {
-    if (!data.length) return [];
-    const vals = data.map(d => d.stress).filter(Boolean);
-    if (!vals.length) return [];
-    const avgStress = Math.round(vals.reduce((s, v) => s + (v!.stress_high || 0), 0) / vals.length);
-    const avgRecovery = Math.round(vals.reduce((s, v) => s + (v!.recovery_high || 0), 0) / vals.length);
-    const restored = vals.filter(v => v!.day_summary === 'restored').length;
-    const stressful = vals.filter(v => v!.day_summary === 'stressful').length;
-    return [
-      { value: `${avgStress}m`, label: 'Avg High Stress' },
-      { value: `${avgRecovery}m`, label: 'Avg Recovery' },
-      { value: `${restored}`, label: 'Restored Days' },
-      { value: `${stressful}`, label: 'Stressful Days' },
-    ];
-  }, [data]);
-
   const barConfig = useMemo((): ChartConfiguration | null => {
     if (!data.length) return null;
     const labels = getDayLabels(data);
@@ -107,9 +90,7 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
   const doughnutRef = useChart(doughnutConfig);
 
   return (
-    <>
-      <StatsRow stats={stats} colorClass="stress" emptyMessage="No stress data for this month" />
-      <div className="charts-grid">
+    <div className="charts-grid">
         <div className="chart-card">
           <h3>Stress vs Recovery</h3>
           <canvas ref={barRef} />
@@ -122,7 +103,6 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
           <h3>Day Summary</h3>
           <canvas ref={doughnutRef} />
         </div>
-      </div>
-    </>
+    </div>
   );
 }

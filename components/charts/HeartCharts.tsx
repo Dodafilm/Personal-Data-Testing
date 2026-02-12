@@ -3,7 +3,6 @@
 import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart, useChartWithClick, getDayLabels } from './useChart';
-import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface HeartChartsProps {
@@ -12,22 +11,6 @@ interface HeartChartsProps {
 }
 
 export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
-  const stats = useMemo(() => {
-    if (!data.length) return [];
-    const vals = data.map(d => d.heart).filter(Boolean);
-    if (!vals.length) return [];
-    const avgResting = Math.round(vals.reduce((s, v) => s + (v!.resting_hr || 0), 0) / vals.length);
-    const avgHrv = Math.round(vals.reduce((s, v) => s + (v!.hrv_avg || 0), 0) / vals.length);
-    const minHr = Math.min(...vals.map(v => v!.hr_min || 999).filter(v => v < 999));
-    const maxHr = Math.max(...vals.map(v => v!.hr_max || 0));
-    return [
-      { value: `${avgResting}`, label: 'Avg Resting HR' },
-      { value: `${avgHrv}ms`, label: 'Avg HRV' },
-      { value: `${minHr}`, label: 'Lowest HR' },
-      { value: `${maxHr}`, label: 'Highest HR' },
-    ];
-  }, [data]);
-
   const restingConfig = useMemo((): ChartConfiguration | null => {
     if (!data.length) return null;
     return {
@@ -112,9 +95,7 @@ export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
   const rangeRef = useChart(rangeConfig);
 
   return (
-    <>
-      <StatsRow stats={stats} colorClass="heart" emptyMessage="No heart rate data for this month" />
-      <div className="charts-grid">
+    <div className="charts-grid">
         <div className="chart-card">
           <h3>Resting Heart Rate</h3>
           <canvas ref={restingRef} />
@@ -127,7 +108,6 @@ export default function HeartCharts({ data, onDayClick }: HeartChartsProps) {
           <h3>HR Range</h3>
           <canvas ref={rangeRef} />
         </div>
-      </div>
-    </>
+    </div>
   );
 }

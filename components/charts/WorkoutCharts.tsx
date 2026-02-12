@@ -3,7 +3,6 @@
 import { useMemo, useCallback } from 'react';
 import type { ChartConfiguration } from 'chart.js/auto';
 import { useChart, useChartWithClick, getDayLabels } from './useChart';
-import StatsRow from '../StatsRow';
 import type { DayRecord } from '@/lib/types';
 
 interface WorkoutChartsProps {
@@ -12,22 +11,6 @@ interface WorkoutChartsProps {
 }
 
 export default function WorkoutCharts({ data, onDayClick }: WorkoutChartsProps) {
-  const stats = useMemo(() => {
-    if (!data.length) return [];
-    const vals = data.map(d => d.workout).filter(Boolean);
-    if (!vals.length) return [];
-    const avgSteps = Math.round(vals.reduce((s, v) => s + (v!.steps || 0), 0) / vals.length);
-    const avgCals = Math.round(vals.reduce((s, v) => s + (v!.calories_active || 0), 0) / vals.length);
-    const avgActive = Math.round(vals.reduce((s, v) => s + (v!.active_min || 0), 0) / vals.length);
-    const avgScore = Math.round(vals.reduce((s, v) => s + (v!.activity_score || 0), 0) / vals.length);
-    return [
-      { value: avgSteps.toLocaleString(), label: 'Avg Steps' },
-      { value: `${avgCals}`, label: 'Avg Calories' },
-      { value: `${avgActive}m`, label: 'Avg Active Time' },
-      { value: `${avgScore}`, label: 'Avg Activity Score' },
-    ];
-  }, [data]);
-
   const stepsConfig = useMemo((): ChartConfiguration | null => {
     if (!data.length) return null;
     const steps = data.map(d => d.workout?.steps || 0);
@@ -109,9 +92,7 @@ export default function WorkoutCharts({ data, onDayClick }: WorkoutChartsProps) 
   const activeRef = useChart(activeConfig);
 
   return (
-    <>
-      <StatsRow stats={stats} colorClass="workout" emptyMessage="No workout data for this month" />
-      <div className="charts-grid">
+    <div className="charts-grid">
         <div className="chart-card">
           <h3>Daily Steps</h3>
           <canvas ref={stepsRef} />
@@ -124,7 +105,6 @@ export default function WorkoutCharts({ data, onDayClick }: WorkoutChartsProps) 
           <h3>Active Minutes</h3>
           <canvas ref={activeRef} />
         </div>
-      </div>
-    </>
+    </div>
   );
 }

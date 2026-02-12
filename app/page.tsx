@@ -15,7 +15,8 @@ import WorkoutCharts from '@/components/charts/WorkoutCharts';
 import StressCharts from '@/components/charts/StressCharts';
 import SleepHeatmap from '@/components/charts/SleepHeatmap';
 import MetricHeatmap from '@/components/charts/MetricHeatmap';
-import CalendarDayPicker from '@/components/CalendarDayPicker';
+import DaySelector from '@/components/DaySelector';
+import DayIntraday from '@/components/charts/DayIntraday';
 import HeartRateOverlay from '@/components/charts/HeartRateOverlay';
 import ActivityOverlay from '@/components/charts/ActivityOverlay';
 import SyncPrompt from '@/components/SyncPrompt';
@@ -34,25 +35,24 @@ export default function DashboardPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
 
-  // Calendar day picker state — defaults to all days in month
-  const daysInMonth = new Date(monthData.year, monthData.month, 0).getDate();
-  const [selectedDays, setSelectedDays] = useState<Set<number>>(() =>
-    new Set(Array.from({ length: daysInMonth }, (_, i) => i + 1))
-  );
+  // Single-day focus state
+  const [focusDay, setFocusDay] = useState<number | null>(null);
 
-  // Reset selectedDays when month changes
+  // Auto-select first day with data on month change
   useEffect(() => {
-    const days = new Date(monthData.year, monthData.month, 0).getDate();
-    setSelectedDays(new Set(Array.from({ length: days }, (_, i) => i + 1)));
-  }, [monthData.year, monthData.month]);
+    if (monthData.data.length > 0) {
+      setFocusDay(parseInt(monthData.data[0].date.slice(8), 10));
+    } else {
+      setFocusDay(null);
+    }
+  }, [monthData.data]);
 
-  // Filtered data for heatmaps (only selected days)
-  const filteredData = useMemo(() => {
-    return monthData.data.filter(d => {
-      const day = parseInt(d.date.slice(8), 10);
-      return selectedDays.has(day);
-    });
-  }, [monthData.data, selectedDays]);
+  // Derive the focused day record
+  const focusDayRecord = useMemo(() => {
+    if (focusDay === null) return null;
+    const dateStr = String(focusDay).padStart(2, '0');
+    return monthData.data.find(d => d.date.slice(8) === dateStr) ?? null;
+  }, [focusDay, monthData.data]);
 
   // Load sample data on first run (local mode only), then refresh
   useEffect(() => {
@@ -157,18 +157,21 @@ export default function DashboardPage() {
 
         <SyncPrompt />
 
-        <CalendarDayPicker
+        <DaySelector
           year={monthData.year}
           month={monthData.month}
-          selectedDays={selectedDays}
-          onChange={setSelectedDays}
+          selectedDay={focusDay}
+          onChange={setFocusDay}
+          data={monthData.data}
         />
+
+        <DayIntraday day={focusDayRecord} />
 
         {/* Sleep Section */}
         <section className="metric-section">
           <h2 className="section-title sleep">Sleep</h2>
           <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <SleepHeatmap data={filteredData} />
+          <SleepHeatmap data={monthData.data} />
         </section>
 
         {/* Heart Rate Section */}
@@ -182,7 +185,7 @@ export default function DashboardPage() {
         <section className="metric-section">
           <h2 className="section-title workout">Workouts &amp; Activity</h2>
           <WorkoutCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <MetricHeatmap data={filteredData} />
+          <MetricHeatmap data={monthData.data} />
           <ActivityOverlay data={monthData.data} />
         </section>
 

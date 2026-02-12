@@ -366,6 +366,13 @@ body {
   cursor: pointer;
 }
 
+/* ===== Share Key ===== */
+.share-key-url { display: flex; gap: 8px; align-items: center; }
+.share-key-url input { flex: 1; font-size: 0.8rem; font-family: monospace; }
+.share-scopes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.share-scopes label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer; }
+.share-scopes input[type="checkbox"] { accent-color: var(--accent-primary); }
+
 /* ===== Metric Sections ===== */
 .metric-section {
   margin-bottom: 32px;

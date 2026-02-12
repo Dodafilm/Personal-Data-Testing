@@ -49,6 +49,12 @@ export default function SettingsPanel({
   const { data: session } = useSession();
   const store = useStore();
 
+  // Share key state
+  const [shareKey, setShareKey] = useState<string | null>(null);
+  const [shareScopes, setShareScopes] = useState<string[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
   useEffect(() => {
     if (!startDate || !endDate) {
       const end = new Date();
@@ -58,6 +64,76 @@ export default function SettingsPanel({
       setEndDate(formatDate(end));
     }
   }, [startDate, endDate]);
+
+  // Load share key when panel opens + user is signed in
+  useEffect(() => {
+    if (!open || !session?.user) return;
+    fetch('/api/health/share')
+      .then(r => r.json())
+      .then(data => {
+        setShareKey(data.shareKey ?? null);
+        setShareScopes(data.shareScopes ?? []);
+      })
+      .catch(() => {});
+  }, [open, session?.user]);
+
+  const handleGenerateKey = async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch('/api/health/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scopes: shareScopes.length > 0 ? shareScopes : ['sleep', 'heart', 'workout', 'stress'] }),
+      });
+      const data = await res.json();
+      setShareKey(data.shareKey);
+      setShareScopes(data.shareScopes);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleUpdateScopes = async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch('/api/health/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scopes: shareScopes }),
+      });
+      const data = await res.json();
+      setShareKey(data.shareKey);
+      setShareScopes(data.shareScopes);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevokeKey = async () => {
+    if (!confirm('Revoke your share key? Anyone using it will lose access.')) return;
+    setShareLoading(true);
+    try {
+      await fetch('/api/health/share', { method: 'DELETE' });
+      setShareKey(null);
+      setShareScopes([]);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleCopyShareUrl = () => {
+    if (!shareKey || !origin) return;
+    const url = `${origin}/api/public/health?key=${shareKey}`;
+    navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
+
+  const toggleScope = (scope: string) => {
+    setShareScopes(prev =>
+      prev.includes(scope) ? prev.filter(s => s !== scope) : [...prev, scope]
+    );
+  };
 
   const handleFiles = useCallback(async (fileList: FileList) => {
     if (!fileList || fileList.length === 0) return;
@@ -173,6 +249,69 @@ export default function SettingsPanel({
               <div className={`status-msg ${importStatus.type}`}>{importStatus.text}</div>
             )}
           </div>
+
+          {/* Data Sharing (authenticated users only) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Data Sharing</h3>
+              <p className="setting-hint">
+                Generate an anonymous share key to let external apps read your health data without logging in.
+              </p>
+
+              {shareKey ? (
+                <>
+                  <div className="share-key-url">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${origin}/api/public/health?key=${shareKey}`}
+                    />
+                    <button className="btn btn-secondary" onClick={handleCopyShareUrl}>
+                      {shareCopied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+
+                  <div className="share-scopes">
+                    {['sleep', 'heart', 'workout', 'stress'].map(scope => (
+                      <label key={scope}>
+                        <input
+                          type="checkbox"
+                          checked={shareScopes.includes(scope)}
+                          onChange={() => toggleScope(scope)}
+                        />
+                        {scope.charAt(0).toUpperCase() + scope.slice(1)}
+                      </label>
+                    ))}
+                  </div>
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleUpdateScopes}
+                    disabled={shareLoading}
+                    style={{ marginTop: 12 }}
+                  >
+                    Update Scopes
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={handleRevokeKey}
+                    disabled={shareLoading}
+                    style={{ marginTop: 8 }}
+                  >
+                    Revoke Key
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  onClick={handleGenerateKey}
+                  disabled={shareLoading}
+                >
+                  Generate Share Key
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Oura Ring */}
           <div className="setting-group">

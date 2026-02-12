@@ -90,6 +90,8 @@ model UserSettings {
   ouraRefreshToken String?   @db.Text
   ouraTokenExpiry  DateTime?
   extraSettings    Json?
+  shareKey         String?   @unique
+  shareScopes      String[]  @default([])
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

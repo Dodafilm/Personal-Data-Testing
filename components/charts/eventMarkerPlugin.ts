@@ -118,9 +118,10 @@ export function createEventMarkerPlugin(
         ctx.fillText(letter, x, badgeY + badgeSize / 2);
         ctx.restore();
 
+        const hitWidth = 24; // wider than badge for easier clicking
         hitboxes.push({
-          x: x - badgeSize / 2,
-          width: badgeSize,
+          x: x - hitWidth / 2,
+          width: hitWidth,
           top: badgeY,
           bottom: chartArea.bottom,
           event,

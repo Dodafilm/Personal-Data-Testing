@@ -317,10 +317,15 @@ export default function DayIntraday({ day, prevDay, onDayUpdated }: DayIntradayP
   // Click handler for event markers
   const handleCanvasClick = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || markerHitboxes.current.length === 0) return;
+
     const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
+    // Convert client coords to canvas CSS-pixel coords, accounting for
+    // possible scaling between the canvas buffer and its CSS display size.
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top) * scaleY;
 
     for (const hb of markerHitboxes.current) {
       if (cx >= hb.x && cx <= hb.x + hb.width && cy >= hb.top && cy <= hb.bottom) {
@@ -336,7 +341,7 @@ export default function DayIntraday({ day, prevDay, onDayUpdated }: DayIntradayP
     if (!canvas) return;
     canvas.addEventListener('click', handleCanvasClick);
     return () => canvas.removeEventListener('click', handleCanvasClick);
-  }, [canvasRef, handleCanvasClick]);
+  }, [canvasRef, handleCanvasClick, config]);
 
   // Save event handler
   const handleSaveEvent = useCallback(async (event: HealthEvent) => {

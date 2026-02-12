@@ -27,6 +27,14 @@ function getEventColor(event: HealthEvent): string {
   return event.color || CATEGORY_COLORS[event.category] || '#dfe6e9';
 }
 
+function parseTimeToHour(time: string, effectiveStart: number): number {
+  const [h, m] = time.split(':').map(Number);
+  let hour = h + m / 60;
+  while (hour < effectiveStart) hour += 24;
+  while (hour >= effectiveStart + 24) hour -= 24;
+  return hour;
+}
+
 export { CATEGORY_COLORS };
 
 export interface EventMarkerPluginOptions {
@@ -70,20 +78,48 @@ export function createEventMarkerPlugin(
       const hitboxes: MarkerHitbox[] = [];
 
       for (const event of events) {
-        const [hStr, mStr] = event.time.split(':');
-        let hour = parseInt(hStr, 10) + parseInt(mStr, 10) / 60;
-
-        // Wrap to the chart's visible range
-        while (hour < effectiveStart) hour += 24;
-        while (hour >= effectiveStart + 24) hour -= 24;
-
-        const x = xScale.getPixelForValue(hour);
+        const startHour = parseTimeToHour(event.time, effectiveStart);
+        const x = xScale.getPixelForValue(startHour);
         if (x < chartArea.left || x > chartArea.right) continue;
 
         const color = getEventColor(event);
         const letter = CATEGORY_LETTERS[event.category] || 'C';
+        const hasEnd = !!event.endTime;
 
-        // Draw dashed vertical line
+        // Compute end pixel if event has an end time
+        let xEnd = x;
+        if (hasEnd) {
+          const endHour = parseTimeToHour(event.endTime!, effectiveStart);
+          // If end is before start, it crosses midnight
+          const adjustedEnd = endHour <= startHour ? endHour + 24 : endHour;
+          xEnd = xScale.getPixelForValue(adjustedEnd);
+          // Clamp to chart area
+          const clampedEnd = Math.min(xEnd, chartArea.right);
+          const clampedStart = Math.max(x, chartArea.left);
+
+          // Draw shaded duration region
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.1;
+          ctx.fillRect(clampedStart, chartArea.top, clampedEnd - clampedStart, chartArea.bottom - chartArea.top);
+          ctx.restore();
+
+          // Draw end time dashed line
+          if (xEnd >= chartArea.left && xEnd <= chartArea.right) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.4;
+            ctx.moveTo(xEnd, chartArea.top);
+            ctx.lineTo(xEnd, chartArea.bottom);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        // Draw start time dashed vertical line
         ctx.save();
         ctx.beginPath();
         ctx.setLineDash([4, 4]);
@@ -114,10 +150,12 @@ export function createEventMarkerPlugin(
         ctx.fillText(letter, x, badgeY + badgeSize / 2);
         ctx.restore();
 
-        const hitWidth = 24; // wider than badge for easier clicking
+        // Hitbox spans the full duration if event has end time
+        const hitLeft = x - 12;
+        const hitRight = hasEnd ? Math.max(xEnd + 12, x + 12) : x + 12;
         hitboxes.push({
-          x: x - hitWidth / 2,
-          width: hitWidth,
+          x: hitLeft,
+          width: hitRight - hitLeft,
           top: badgeY,
           bottom: chartArea.bottom,
           event,

@@ -9,6 +9,7 @@ import { useOuraConnection } from '@/hooks/useOuraConnection';
 import DashboardHeader from '@/components/DashboardHeader';
 import SettingsPanel from '@/components/SettingsPanel';
 import DayDetail from '@/components/DayDetail';
+import SleepCharts from '@/components/charts/SleepCharts';
 import HeartCharts from '@/components/charts/HeartCharts';
 import StressCharts from '@/components/charts/StressCharts';
 import DaySelector from '@/components/DaySelector';
@@ -170,6 +171,12 @@ export default function DashboardPage() {
         />
 
         <DayIntraday day={focusDayRecord} />
+
+        {/* Sleep Section */}
+        <section className="metric-section">
+          <h2 className="section-title sleep">Sleep</h2>
+          <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
+        </section>
 
         {/* Heart Rate Section */}
         <section className="metric-section">

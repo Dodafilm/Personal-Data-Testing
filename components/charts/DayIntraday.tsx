@@ -95,15 +95,15 @@ function SleepHypnogramCard({ day }: { day: DayRecord }) {
             grid: { color: 'rgba(42, 42, 64, 0.5)' },
           },
           y: {
+            reverse: true,
             min: 0.5,
             max: 4.5,
             ticks: {
               stepSize: 1,
               callback: (val) => STAGE_LABELS[val as number] || '',
-              color: '#55556a',
-              font: { size: 10 },
+              color: '#a8a8c0',
+              font: { size: 11, weight: 'bold' as const },
             },
-            title: { display: true, text: 'Sleep Stage', color: '#55556a' },
             grid: { color: 'rgba(42, 42, 64, 0.5)' },
           },
         },

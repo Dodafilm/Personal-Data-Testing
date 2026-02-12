@@ -32,7 +32,6 @@ export async function GET(
       select: { ouraAccessToken: true, ouraTokenExpiry: true },
     });
     if (settings?.ouraAccessToken) {
-      // Check if token is still valid
       if (!settings.ouraTokenExpiry || settings.ouraTokenExpiry > new Date()) {
         token = settings.ouraAccessToken;
       }
@@ -53,64 +52,102 @@ export async function GET(
   const startDate = url.searchParams.get('start_date');
   const endDate = url.searchParams.get('end_date');
 
-  // Oura heartrate endpoint uses start_datetime/end_datetime (ISO 8601),
-  // while all other endpoints use start_date/end_date (YYYY-MM-DD).
-  const useDatetime = endpoint === 'heartrate';
-
-  const apiParams = new URLSearchParams();
-  if (startDate) {
-    apiParams.set(useDatetime ? 'start_datetime' : 'start_date',
-      useDatetime ? `${startDate}T00:00:00+00:00` : startDate);
-  }
-  if (endDate) {
-    apiParams.set(useDatetime ? 'end_datetime' : 'end_date',
-      useDatetime ? `${endDate}T23:59:59+00:00` : endDate);
-  }
-
   try {
-    // Fetch all pages — Oura API v2 paginates via next_token,
-    // especially for heartrate which returns individual samples.
-    const allData: unknown[] = [];
-    let nextToken: string | null = null;
-
-    do {
-      const pageParams = new URLSearchParams(apiParams);
-      if (nextToken) pageParams.set('next_token', nextToken);
-
-      const apiUrl = `${BASE_URL}${path}?${pageParams}`;
-      const apiRes = await fetch(apiUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (apiRes.status === 401) {
-        return NextResponse.json(
-          { error: `Oura returned 401 for ${endpoint}` },
-          { status: 401 },
-        );
+    // Oura heartrate endpoint uses start_datetime/end_datetime and has
+    // a max 30-day range per request. Split into chunks automatically.
+    if (endpoint === 'heartrate' && startDate && endDate) {
+      const allData: unknown[] = [];
+      for (const [chunkStart, chunkEnd] of chunkDateRange(startDate, endDate, 30)) {
+        const chunkParams = new URLSearchParams();
+        chunkParams.set('start_datetime', `${chunkStart}T00:00:00+00:00`);
+        chunkParams.set('end_datetime', `${chunkEnd}T23:59:59+00:00`);
+        const result = await fetchAllPages(path, chunkParams, token);
+        if ('error' in result) {
+          return NextResponse.json({ error: result.error }, { status: result.status });
+        }
+        allData.push(...result.data);
       }
+      return NextResponse.json({ data: allData });
+    }
 
-      if (!apiRes.ok) {
-        const text = await apiRes.text();
-        return NextResponse.json(
-          { error: `Oura API error ${apiRes.status}: ${text}` },
-          { status: apiRes.status },
-        );
-      }
+    // All other endpoints: standard start_date/end_date params
+    const apiParams = new URLSearchParams();
+    if (startDate) apiParams.set('start_date', startDate);
+    if (endDate) apiParams.set('end_date', endDate);
 
-      const page = await apiRes.json();
-      if (page.data && Array.isArray(page.data)) {
-        allData.push(...page.data);
-      }
-      nextToken = page.next_token || null;
-    } while (nextToken);
-
-    return NextResponse.json({ data: allData });
+    const result = await fetchAllPages(path, apiParams, token);
+    if ('error' in result) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+    return NextResponse.json({ data: result.data });
   } catch (err) {
     return NextResponse.json(
       { error: `Proxy error: ${(err as Error).message}` },
       { status: 502 },
     );
   }
+}
+
+/** Fetch all pages from an Oura API endpoint (handles next_token pagination). */
+async function fetchAllPages(
+  path: string,
+  baseParams: URLSearchParams,
+  token: string,
+): Promise<{ data: unknown[] } | { error: string; status: number }> {
+  const allData: unknown[] = [];
+  let nextToken: string | null = null;
+
+  do {
+    const pageParams = new URLSearchParams(baseParams);
+    if (nextToken) pageParams.set('next_token', nextToken);
+
+    const apiUrl = `${BASE_URL}${path}?${pageParams}`;
+    const apiRes = await fetch(apiUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (apiRes.status === 401) {
+      return { error: `Oura returned 401`, status: 401 };
+    }
+    if (!apiRes.ok) {
+      const text = await apiRes.text();
+      return { error: `Oura API error ${apiRes.status}: ${text}`, status: apiRes.status };
+    }
+
+    const page = await apiRes.json();
+    if (page.data && Array.isArray(page.data)) {
+      allData.push(...page.data);
+    }
+    nextToken = page.next_token || null;
+  } while (nextToken);
+
+  return { data: allData };
+}
+
+/** Split a date range into chunks of maxDays each. Returns [start, end] pairs (YYYY-MM-DD). */
+function chunkDateRange(start: string, end: string, maxDays: number): [string, string][] {
+  const chunks: [string, string][] = [];
+  const endDate = new Date(end + 'T00:00:00');
+  let cursor = new Date(start + 'T00:00:00');
+
+  while (cursor <= endDate) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setDate(chunkEnd.getDate() + maxDays - 1);
+    if (chunkEnd > endDate) chunkEnd.setTime(endDate.getTime());
+
+    chunks.push([fmt(cursor), fmt(chunkEnd)]);
+    cursor = new Date(chunkEnd);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return chunks;
+}
+
+function fmt(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function parseCookie(cookieHeader: string, name: string): string | null {

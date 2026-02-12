@@ -104,8 +104,9 @@ export function normalizeOuraStress(apiData: { data?: Array<Record<string, unkno
     date: item.day as string,
     source: 'oura',
     stress: {
-      stress_high: (item.stress_high as number) || 0,
-      recovery_high: (item.recovery_high as number) || 0,
+      // Oura API returns seconds — convert to minutes
+      stress_high: Math.round(((item.stress_high as number) || 0) / 60),
+      recovery_high: Math.round(((item.recovery_high as number) || 0) / 60),
       day_summary: (item.day_summary as string) || 'normal',
     },
   }));

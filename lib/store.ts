@@ -117,12 +117,26 @@ function mergeDay(existing: DayRecord, incoming: DayRecord): DayRecord {
   return {
     date: existing.date,
     source: incoming.source || existing.source,
-    sleep: { ...(existing.sleep || {}), ...(incoming.sleep || {}) } as DayRecord['sleep'],
-    heart: { ...(existing.heart || {}), ...(incoming.heart || {}) } as DayRecord['heart'],
-    workout: { ...(existing.workout || {}), ...(incoming.workout || {}) } as DayRecord['workout'],
-    stress: { ...(existing.stress || {}), ...(incoming.stress || {}) } as DayRecord['stress'],
+    sleep: mergeSubData(existing.sleep, incoming.sleep) as DayRecord['sleep'],
+    heart: mergeSubData(existing.heart, incoming.heart) as DayRecord['heart'],
+    workout: mergeSubData(existing.workout, incoming.workout) as DayRecord['workout'],
+    stress: mergeSubData(existing.stress, incoming.stress) as DayRecord['stress'],
     events: incoming.events || existing.events,
   };
+}
+
+/** Merge sub-objects without overwriting existing truthy values with falsy/zero ones.
+ *  e.g. sleep sets hr_max:0 but heart rate sets hr_max:150 — keep 150. */
+function mergeSubData<T extends object>(existing: T | undefined, incoming: T | undefined): T | undefined {
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+  const result = { ...existing } as Record<string, unknown>;
+  for (const [key, val] of Object.entries(incoming)) {
+    if (val || val === false || !result[key]) {
+      result[key] = val;
+    }
+  }
+  return result as T;
 }
 
 function formatDate(d: Date): string {

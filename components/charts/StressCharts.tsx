@@ -20,15 +20,15 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
       data: {
         labels,
         datasets: [
-          { label: 'High Stress', data: stressVals.map(v => v?.stress_high || 0), backgroundColor: '#ffa500', stack: 'stack' },
-          { label: 'Recovery', data: stressVals.map(v => v?.recovery_high || 0), backgroundColor: '#55efc4', stack: 'stack' },
+          { label: 'High Stress', data: stressVals.map(v => (v?.stress_high || 0) / 60), backgroundColor: '#ffa500', stack: 'stack' },
+          { label: 'Recovery', data: stressVals.map(v => (v?.recovery_high || 0) / 60), backgroundColor: '#55efc4', stack: 'stack' },
         ],
       },
       options: {
         plugins: { legend: { position: 'bottom' } },
         scales: {
           x: { stacked: true },
-          y: { stacked: true, max: 1440, title: { display: true, text: 'Minutes (24h)', color: '#55556a' } },
+          y: { stacked: true, max: 12, title: { display: true, text: 'Hours', color: '#55556a' } },
         },
       },
     };
@@ -42,7 +42,7 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
         labels: getDayLabels(data),
         datasets: [{
           label: 'High Stress',
-          data: data.map(d => d.stress?.stress_high || 0),
+          data: data.map(d => (d.stress?.stress_high || 0) / 60),
           borderColor: '#ffa500',
           backgroundColor: 'rgba(255, 165, 0, 0.1)',
           fill: true,
@@ -52,7 +52,7 @@ export default function StressCharts({ data, onDayClick }: StressChartsProps) {
         }],
       },
       options: {
-        scales: { y: { min: 0, title: { display: true, text: 'Minutes', color: '#55556a' } } },
+        scales: { y: { min: 0, title: { display: true, text: 'Hours', color: '#55556a' } } },
       },
     };
   }, [data]);

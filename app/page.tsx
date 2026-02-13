@@ -397,7 +397,13 @@ export default function DashboardPage() {
         )}
 
         {activeTab === 'goals' && (
-          <GoalsPanel data={displayData} settings={settings} onUpdateSettings={updateSettings} />
+          <GoalsPanel
+            data={displayData}
+            focusDay={displayDayRecord}
+            focusDate={focusDateStr}
+            settings={settings}
+            onUpdateSettings={updateSettings}
+          />
         )}
       </div>
 

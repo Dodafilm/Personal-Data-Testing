@@ -2143,3 +2143,49 @@ body {
   font-size: 0.8rem;
   padding: 6px 16px;
 }
+
+.goal-add-period {
+  width: 100px;
+}
+
+.goals-editor-section {
+  margin-bottom: 8px;
+}
+
+.goals-editor-period {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.goals-editor-section:first-child .goals-editor-period {
+  border-top: none;
+  padding-top: 0;
+}
+
+.goals-section-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: -8px 0 12px;
+}
+
+.goal-fill-weekly {
+  background: var(--accent-sleep);
+}
+
+.goal-fill-monthly {
+  background: var(--accent-stress);
+}
+
+.goal-agg-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-style: italic;
+}

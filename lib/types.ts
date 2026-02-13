@@ -84,11 +84,14 @@ export interface DayRecord {
   events?: HealthEvent[];
 }
 
+export type GoalPeriod = 'daily' | 'weekly' | 'monthly';
+
 export interface HealthGoal {
   metric: string;           // e.g. 'sleep_hours', 'steps', 'hrv_avg'
   label: string;
   target: number;
   unit: string;
+  period: GoalPeriod;
 }
 
 export interface Settings {

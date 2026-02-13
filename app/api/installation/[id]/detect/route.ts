@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { hmacHash } from '@/lib/crypto';
+import { hmacHash, decryptJsonField, encryptJson } from '@/lib/crypto';
 import { audit, getClientIp } from '@/lib/audit';
 import { checkRateLimit, rateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
 import type { HealthEvent } from '@/lib/types';
@@ -114,20 +114,21 @@ export async function POST(request: Request, { params }: Params) {
   });
 
   const existingEvents = existingRecord?.events
-    ? (existingRecord.events as unknown as HealthEvent[])
+    ? (decryptJsonField<HealthEvent[]>(existingRecord.events) ?? [])
     : [];
 
   const updatedEvents = [...existingEvents, event];
+  const encryptedEvents = encryptJson(updatedEvents) as Prisma.InputJsonValue;
 
   await prisma.healthRecord.upsert({
     where: { userId_date: { userId: deviceToken.userId, date: today } },
     create: {
       userId: deviceToken.userId,
       date: today,
-      events: updatedEvents as unknown as Prisma.InputJsonValue,
+      events: encryptedEvents,
     },
     update: {
-      events: updatedEvents as unknown as Prisma.InputJsonValue,
+      events: encryptedEvents,
     },
   });
 

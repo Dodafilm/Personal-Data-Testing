@@ -82,6 +82,9 @@ export default function LoginPage() {
         <p className="auth-footer">
           <Link href="/">Continue without account</Link>
         </p>
+        <p className="auth-footer" style={{ fontSize: '0.75rem' }}>
+          <Link href="/privacy">Privacy Policy</Link> &middot; <Link href="/terms">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );

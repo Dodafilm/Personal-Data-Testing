@@ -35,6 +35,10 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     'camera=(), microphone=(), geolocation=(), payment=()'
   );
 
+  // Cross-origin isolation
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Resource-Policy', 'same-origin');
+
   // Content Security Policy
   const isDev = process.env.NODE_ENV === 'development';
   const csp = [
@@ -55,6 +59,12 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+function getAppOrigin(request: NextRequest): string {
+  const host = request.headers.get('host') || 'localhost:3000';
+  const proto = request.headers.get('x-forwarded-proto') || 'http';
+  return `${proto}://${host}`;
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -63,9 +73,34 @@ export function proxy(request: NextRequest) {
     return authHandler(request, {} as never);
   }
 
-  // All other routes: add security headers
+  // CORS: handle preflight for API routes
+  if (pathname.startsWith('/api/') && request.method === 'OPTIONS') {
+    const appOrigin = getAppOrigin(request);
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': appOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
+  // All other routes: add security headers + CORS
   const response = NextResponse.next();
-  return addSecurityHeaders(response);
+  addSecurityHeaders(response);
+
+  // CORS enforcement for API routes
+  if (pathname.startsWith('/api/')) {
+    const origin = request.headers.get('origin');
+    const appOrigin = getAppOrigin(request);
+    if (origin && origin !== appOrigin) {
+      response.headers.set('Access-Control-Allow-Origin', appOrigin);
+    }
+  }
+
+  return response;
 }
 
 export const config = {

@@ -37,6 +37,9 @@ export default function InstallationManager() {
   // API key visibility
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
+  // Newly created / rotated keys (shown in full, once only)
+  const [fullKeys, setFullKeys] = useState<Map<string, string>>(new Map());
+
   // Device assignment
   const [consentingUsers, setConsentingUsers] = useState<ConsentingUser[]>([]);
   const [assignUserId, setAssignUserId] = useState('');
@@ -90,6 +93,11 @@ export default function InstallationManager() {
     });
 
     if (res.ok) {
+      const data = await res.json();
+      // Store the full key so it can be shown/copied once
+      if (data.apiKey) {
+        setFullKeys(prev => new Map(prev).set(data.id, data.apiKey));
+      }
       setCreateName('');
       setCreateScopes([]);
       setCreateTimeout(120);
@@ -129,6 +137,17 @@ export default function InstallationManager() {
 
     await fetch(`/api/installation/${id}`, { method: 'DELETE' });
     fetchInstallations();
+  };
+
+  const handleRotateKey = async (id: string) => {
+    if (!confirm('Rotate API key? The old key will stop working immediately.')) return;
+
+    const res = await fetch(`/api/installation/${id}/rotate-key`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      setFullKeys(prev => new Map(prev).set(id, data.apiKey));
+      fetchInstallations();
+    }
   };
 
   const startEdit = (inst: Installation) => {
@@ -311,19 +330,33 @@ export default function InstallationManager() {
                 <div className="installation-api-key">
                   <span className="api-key-label">API Key:</span>
                   <code>
-                    {visibleKeys.has(inst.id) ? inst.apiKey : '****-****-****'}
+                    {fullKeys.has(inst.id)
+                      ? fullKeys.get(inst.id)
+                      : visibleKeys.has(inst.id)
+                        ? inst.apiKey
+                        : '****-****-****'}
                   </code>
+                  {!fullKeys.has(inst.id) && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => toggleKey(inst.id)}
+                    >
+                      {visibleKeys.has(inst.id) ? 'Hide' : 'Show'}
+                    </button>
+                  )}
+                  {fullKeys.has(inst.id) && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => copyToClipboard(fullKeys.get(inst.id)!)}
+                    >
+                      Copy
+                    </button>
+                  )}
                   <button
                     className="btn btn-secondary btn-sm"
-                    onClick={() => toggleKey(inst.id)}
+                    onClick={() => handleRotateKey(inst.id)}
                   >
-                    {visibleKeys.has(inst.id) ? 'Hide' : 'Show'}
-                  </button>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => copyToClipboard(inst.apiKey)}
-                  >
-                    Copy
+                    Rotate
                   </button>
                 </div>
                 <div className="installation-checkin-url">

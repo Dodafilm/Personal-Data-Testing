@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { validatePassword } from '@/lib/password-validation';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -10,6 +11,11 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const passwordValidation = useMemo(
+    () => (password ? validatePassword(password) : null),
+    [password],
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,11 +90,18 @@ export default function SignupPage() {
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="At least 12 characters, mixed case, digit, special"
             required
-            minLength={8}
+            minLength={12}
             autoComplete="new-password"
           />
+          {passwordValidation && !passwordValidation.valid && (
+            <ul className="auth-password-errors">
+              {passwordValidation.errors.map(err => (
+                <li key={err}>{err}</li>
+              ))}
+            </ul>
+          )}
 
           {error && <div className="auth-error">{error}</div>}
 
@@ -113,6 +126,9 @@ export default function SignupPage() {
         </p>
         <p className="auth-footer">
           <Link href="/">Continue without account</Link>
+        </p>
+        <p className="auth-footer" style={{ fontSize: '0.75rem' }}>
+          <Link href="/privacy">Privacy Policy</Link> &middot; <Link href="/terms">Terms of Service</Link>
         </p>
       </div>
     </div>

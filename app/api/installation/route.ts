@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
-import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
+import { parseJsonBody, isErrorResponse, maskApiKey } from '@/lib/api-utils';
 
 const VALID_ROOMS = ['room-1', 'room-2', 'room-3', 'room-4'];
 const VALID_SCOPES = ['sleep', 'heart', 'workout', 'stress'];
@@ -40,7 +40,7 @@ export async function GET() {
     artistId: inst.artistId,
     name: inst.name,
     room: inst.room,
-    apiKey: inst.apiKey,
+    apiKey: maskApiKey(inst.apiKey),
     dataScopes: inst.dataScopes,
     active: inst.active,
     timeoutMin: inst.timeoutMin,

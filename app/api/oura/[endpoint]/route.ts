@@ -83,8 +83,9 @@ export async function GET(
     }
     return NextResponse.json({ data: result.data });
   } catch (err) {
+    console.error('Oura proxy error:', err);
     return NextResponse.json(
-      { error: `Proxy error: ${(err as Error).message}` },
+      { error: 'Failed to fetch data from Oura' },
       { status: 502 },
     );
   }
@@ -113,7 +114,8 @@ async function fetchAllPages(
     }
     if (!apiRes.ok) {
       const text = await apiRes.text();
-      return { error: `Oura API error ${apiRes.status}: ${text}`, status: apiRes.status };
+      console.error(`Oura API error ${apiRes.status}:`, text);
+      return { error: 'Oura API request failed', status: apiRes.status };
     }
 
     const page = await apiRes.json();

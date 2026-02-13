@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
+import { encryptJson, decryptJsonField } from '@/lib/crypto';
 import type { DayRecord } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
-function toJson(val: unknown): Prisma.InputJsonValue | undefined {
-  return val ? (val as Prisma.InputJsonValue) : undefined;
+function toEncrypted(val: unknown): Prisma.InputJsonValue | undefined {
+  return encryptJson(val) as Prisma.InputJsonValue | undefined;
 }
 
 // GET /api/health/records?start=YYYY-MM-DD&end=YYYY-MM-DD
@@ -94,58 +95,67 @@ export async function GET(request: Request) {
   const days: DayRecord[] = records.map(r => ({
     date: r.date,
     source: r.source ?? undefined,
-    sleep: r.sleep as unknown as DayRecord['sleep'],
-    heart: r.heart as unknown as DayRecord['heart'],
-    workout: r.workout as unknown as DayRecord['workout'],
-    stress: r.stress as unknown as DayRecord['stress'],
-    events: r.events as unknown as DayRecord['events'],
+    sleep: decryptJsonField<DayRecord['sleep']>(r.sleep),
+    heart: decryptJsonField<DayRecord['heart']>(r.heart),
+    workout: decryptJsonField<DayRecord['workout']>(r.workout),
+    stress: decryptJsonField<DayRecord['stress']>(r.stress),
+    events: decryptJsonField<DayRecord['events']>(r.events),
   }));
 
   return NextResponse.json(days);
 }
 
-// Shallow-merge two JSON objects: incoming fields overwrite existing,
+// Shallow-merge two plain objects: incoming fields overwrite existing,
 // but existing fields not present in incoming are preserved.
-// Falsy primitives (0, '', null) in incoming do NOT overwrite truthy existing values.
-function mergeJson(
-  existing: Prisma.InputJsonValue | null | undefined,
+// Both values should be decrypted before merging.
+function mergePlain(
+  existing: unknown,
   incoming: unknown,
-): Prisma.InputJsonValue | undefined {
-  if (!incoming) return (existing as Prisma.InputJsonValue) ?? undefined;
+): unknown | undefined {
+  if (!incoming) return existing ?? undefined;
   if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
-    return incoming as Prisma.InputJsonValue;
+    return incoming;
   }
   const ex = existing as Record<string, unknown>;
   const inc = incoming as Record<string, unknown>;
   const result = { ...ex };
   for (const key of Object.keys(inc)) {
     const val = inc[key];
-    // Only overwrite if incoming value is truthy, or existing has no value
     if (val || !(key in ex) || !ex[key]) {
       result[key] = val;
     }
   }
-  return result as Prisma.InputJsonValue;
+  return result;
 }
 
 // Merge incoming data with existing record so we never overwrite
 // one category's data when saving another.
+// Decrypts existing → merges → encrypts result.
 async function mergedUpsert(userId: string, day: DayRecord) {
   const existing = await prisma.healthRecord.findUnique({
     where: { userId_date: { userId, date: day.date } },
   });
 
+  // Decrypt existing fields for merging
+  const exSleep = decryptJsonField(existing?.sleep);
+  const exHeart = decryptJsonField(existing?.heart);
+  const exWorkout = decryptJsonField(existing?.workout);
+  const exStress = decryptJsonField(existing?.stress);
+
+  // Merge then encrypt
   const merged = {
-    sleep: mergeJson(existing?.sleep as Prisma.InputJsonValue, day.sleep),
-    heart: mergeJson(existing?.heart as Prisma.InputJsonValue, day.heart),
-    workout: mergeJson(existing?.workout as Prisma.InputJsonValue, day.workout),
-    stress: mergeJson(existing?.stress as Prisma.InputJsonValue, day.stress),
+    sleep: toEncrypted(mergePlain(exSleep, day.sleep)),
+    heart: toEncrypted(mergePlain(exHeart, day.heart)),
+    workout: toEncrypted(mergePlain(exWorkout, day.workout)),
+    stress: toEncrypted(mergePlain(exStress, day.stress)),
   };
 
-  // Events use replace strategy (full array from client)
+  // Events use replace strategy (full array from client), encrypt
   const events = day.events !== undefined
-    ? toJson(day.events)
-    : (existing?.events as Prisma.InputJsonValue) ?? undefined;
+    ? toEncrypted(day.events)
+    : existing?.events
+      ? (encryptJson(decryptJsonField(existing.events)) as Prisma.InputJsonValue | undefined)
+      : undefined;
 
   await prisma.healthRecord.upsert({
     where: { userId_date: { userId, date: day.date } },

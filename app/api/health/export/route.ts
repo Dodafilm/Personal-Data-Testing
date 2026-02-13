@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
+import { decryptJsonField } from '@/lib/crypto';
 import type { DayRecord } from '@/lib/types';
 
 // GET /api/health/export — export all user data (GDPR right to portability)
@@ -69,11 +70,11 @@ export async function GET(request: Request) {
   const healthData: DayRecord[] = healthRecords.map(r => ({
     date: r.date,
     source: r.source ?? undefined,
-    sleep: r.sleep as unknown as DayRecord['sleep'],
-    heart: r.heart as unknown as DayRecord['heart'],
-    workout: r.workout as unknown as DayRecord['workout'],
-    stress: r.stress as unknown as DayRecord['stress'],
-    events: r.events as unknown as DayRecord['events'],
+    sleep: decryptJsonField<DayRecord['sleep']>(r.sleep),
+    heart: decryptJsonField<DayRecord['heart']>(r.heart),
+    workout: decryptJsonField<DayRecord['workout']>(r.workout),
+    stress: decryptJsonField<DayRecord['stress']>(r.stress),
+    events: decryptJsonField<DayRecord['events']>(r.events),
   }));
 
   audit({
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
 
   const exportData = {
     exportedAt: new Date().toISOString(),
-    format: 'health-analytics-dashboard-v0.6.0',
+    format: 'health-analytics-dashboard-v0.7.0',
     account: user,
     settings,
     healthData,

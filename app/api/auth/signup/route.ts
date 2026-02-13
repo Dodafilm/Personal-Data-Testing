@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, rateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
+import { validatePassword } from '@/lib/password-validation';
 
 export async function POST(request: Request) {
   // Rate limit: 10 signup attempts per 15 minutes per IP
@@ -23,9 +24,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 8) {
+    const validation = validatePassword(password);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: 'Password must be at least 8 characters' },
+        { error: validation.errors.join('. ') },
         { status: 400 },
       );
     }
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
-        { error: 'An account with this email already exists' },
+        { error: 'Unable to create account. Please try a different email or sign in.' },
         { status: 409 },
       );
     }

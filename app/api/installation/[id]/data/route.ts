@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
 import { checkRateLimit, rateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
+import { decryptJsonField, encryptJson } from '@/lib/crypto';
 import type { DayRecord, HealthEvent } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
@@ -80,13 +81,13 @@ export async function GET(request: Request, { params }: Params) {
         where: { userId_date: { userId: s.participantId, date: today } },
       });
       if (record?.events) {
-        const events = record.events as unknown as HealthEvent[];
+        const events = decryptJsonField<HealthEvent[]>(record.events) ?? [];
         const updated = events.map(e =>
           e.id === s.eventId ? { ...e, endTime, durationMin } : e
         );
         await prisma.healthRecord.update({
           where: { id: record.id },
-          data: { events: updated as unknown as Prisma.InputJsonValue },
+          data: { events: encryptJson(updated) as Prisma.InputJsonValue },
         });
       }
     }
@@ -134,10 +135,10 @@ export async function GET(request: Request, { params }: Params) {
 
       if (r) {
         for (const scope of installation.dataScopes) {
-          if (scope === 'sleep' && r.sleep) data.sleep = r.sleep as unknown as DayRecord['sleep'];
-          if (scope === 'heart' && r.heart) data.heart = r.heart as unknown as DayRecord['heart'];
-          if (scope === 'workout' && r.workout) data.workout = r.workout as unknown as DayRecord['workout'];
-          if (scope === 'stress' && r.stress) data.stress = r.stress as unknown as DayRecord['stress'];
+          if (scope === 'sleep' && r.sleep) data.sleep = decryptJsonField<DayRecord['sleep']>(r.sleep);
+          if (scope === 'heart' && r.heart) data.heart = decryptJsonField<DayRecord['heart']>(r.heart);
+          if (scope === 'workout' && r.workout) data.workout = decryptJsonField<DayRecord['workout']>(r.workout);
+          if (scope === 'stress' && r.stress) data.stress = decryptJsonField<DayRecord['stress']>(r.stress);
         }
       }
 

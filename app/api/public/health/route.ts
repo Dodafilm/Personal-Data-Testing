@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { decryptJsonField } from '@/lib/crypto';
 import type { DayRecord } from '@/lib/types';
 
 // GET /api/public/health?key=<shareKey>&start=YYYY-MM-DD&end=YYYY-MM-DD
@@ -39,20 +40,20 @@ export async function GET(request: Request) {
     orderBy: { date: 'asc' },
   });
 
-  // Filter to only include allowed scopes
+  // Filter to only include allowed scopes, decrypt on read
   const days: Partial<DayRecord>[] = records.map(r => {
     const day: Partial<DayRecord> = { date: r.date };
     if (shareScopes.includes('sleep') && r.sleep) {
-      day.sleep = r.sleep as unknown as DayRecord['sleep'];
+      day.sleep = decryptJsonField<DayRecord['sleep']>(r.sleep);
     }
     if (shareScopes.includes('heart') && r.heart) {
-      day.heart = r.heart as unknown as DayRecord['heart'];
+      day.heart = decryptJsonField<DayRecord['heart']>(r.heart);
     }
     if (shareScopes.includes('workout') && r.workout) {
-      day.workout = r.workout as unknown as DayRecord['workout'];
+      day.workout = decryptJsonField<DayRecord['workout']>(r.workout);
     }
     if (shareScopes.includes('stress') && r.stress) {
-      day.stress = r.stress as unknown as DayRecord['stress'];
+      day.stress = decryptJsonField<DayRecord['stress']>(r.stress);
     }
     return day;
   });

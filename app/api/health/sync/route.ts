@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
+import { encryptJson, decryptJsonField } from '@/lib/crypto';
 import type { DayRecord } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
-function toJson(val: unknown): Prisma.InputJsonValue | undefined {
-  return val ? (val as Prisma.InputJsonValue) : undefined;
+function toEncrypted(val: unknown): Prisma.InputJsonValue | undefined {
+  return encryptJson(val) as Prisma.InputJsonValue | undefined;
 }
 
 // POST /api/health/sync — bulk import localStorage data to cloud
@@ -37,14 +38,20 @@ export async function POST(request: Request) {
 
     if (existing) {
       // Merge: existing cloud data takes priority, local fills gaps
+      // Decrypt existing data for comparison, then encrypt result
+      const exSleep = decryptJsonField(existing.sleep);
+      const exHeart = decryptJsonField(existing.heart);
+      const exWorkout = decryptJsonField(existing.workout);
+      const exStress = decryptJsonField(existing.stress);
+
       await prisma.healthRecord.update({
         where: { userId_date: { userId: session.user.id, date: day.date } },
         data: {
           source: existing.source ?? day.source ?? null,
-          sleep: existing.sleep ?? toJson(day.sleep),
-          heart: existing.heart ?? toJson(day.heart),
-          workout: existing.workout ?? toJson(day.workout),
-          stress: existing.stress ?? toJson(day.stress),
+          sleep: toEncrypted(exSleep ?? day.sleep),
+          heart: toEncrypted(exHeart ?? day.heart),
+          workout: toEncrypted(exWorkout ?? day.workout),
+          stress: toEncrypted(exStress ?? day.stress),
         },
       });
     } else {
@@ -53,10 +60,10 @@ export async function POST(request: Request) {
           userId: session.user.id,
           date: day.date,
           source: day.source ?? null,
-          sleep: toJson(day.sleep),
-          heart: toJson(day.heart),
-          workout: toJson(day.workout),
-          stress: toJson(day.stress),
+          sleep: toEncrypted(day.sleep),
+          heart: toEncrypted(day.heart),
+          workout: toEncrypted(day.workout),
+          stress: toEncrypted(day.stress),
         },
       });
     }

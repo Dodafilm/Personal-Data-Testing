@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
-import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
+import { parseJsonBody, isErrorResponse, maskApiKey } from '@/lib/api-utils';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: Params) {
     artistId: installation.artistId,
     name: installation.name,
     room: installation.room,
-    apiKey: installation.apiKey,
+    apiKey: maskApiKey(installation.apiKey),
     dataScopes: installation.dataScopes,
     active: installation.active,
     timeoutMin: installation.timeoutMin,
@@ -125,7 +125,7 @@ export async function PATCH(request: Request, { params }: Params) {
     artistId: updated.artistId,
     name: updated.name,
     room: updated.room,
-    apiKey: updated.apiKey,
+    apiKey: maskApiKey(updated.apiKey),
     dataScopes: updated.dataScopes,
     active: updated.active,
     timeoutMin: updated.timeoutMin,

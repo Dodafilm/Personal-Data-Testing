@@ -15,7 +15,8 @@ export type AuditAction =
   | 'installation.update'
   | 'installation.delete'
   | 'auth.login'
-  | 'auth.login_failed';
+  | 'auth.login_failed'
+  | 'account.delete';
 
 export interface AuditEntry {
   userId?: string;

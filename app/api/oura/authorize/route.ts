@@ -6,7 +6,7 @@ const SCOPES = 'daily sleep heartrate workout session personal';
 export async function GET(request: Request) {
   const clientId = process.env.OURA_CLIENT_ID;
   if (!clientId) {
-    return NextResponse.json({ error: 'OURA_CLIENT_ID not configured' }, { status: 500 });
+    return NextResponse.json({ error: 'Oura integration is not available' }, { status: 503 });
   }
 
   const url = new URL(request.url);

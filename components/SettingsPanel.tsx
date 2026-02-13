@@ -201,7 +201,7 @@ export default function SettingsPanel({
       <div className={`settings-panel${open ? ' open' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <span className="version-label">v0.6.0</span>
+          <span className="version-label">v0.7.0</span>
           <button className="icon-btn" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">

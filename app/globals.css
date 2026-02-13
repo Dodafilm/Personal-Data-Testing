@@ -731,6 +731,17 @@ body {
   margin-top: 12px;
 }
 
+.auth-password-errors {
+  list-style: none;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--accent-danger);
+}
+
+.auth-password-errors li::before {
+  content: '\2022 ';
+}
+
 .auth-submit {
   width: 100%;
   margin-top: 24px;
@@ -2581,4 +2592,112 @@ body {
 .btn-sm {
   font-size: 0.75rem;
   padding: 4px 10px;
+}
+
+/* ===== Legal Pages (Privacy & Terms) ===== */
+.legal-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.legal-card {
+  width: 100%;
+  max-width: 720px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+}
+
+.legal-updated {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+}
+
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-nav a {
+  color: var(--accent-secondary);
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  transition: background var(--transition);
+}
+
+.legal-nav a:hover {
+  background: var(--bg-card-hover);
+}
+
+.legal-card section {
+  margin-bottom: 28px;
+}
+
+.legal-card h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.legal-card p,
+.legal-card li {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.legal-card ul {
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.legal-card li {
+  margin-bottom: 6px;
+}
+
+.legal-card a {
+  color: var(--accent-secondary);
+  text-decoration: none;
+}
+
+.legal-card a:hover {
+  text-decoration: underline;
+}
+
+.legal-footer-links {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.legal-footer-links a {
+  color: var(--accent-secondary);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.legal-footer-links a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .legal-card {
+    padding: 28px 20px;
+  }
 }

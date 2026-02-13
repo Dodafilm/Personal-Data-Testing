@@ -61,3 +61,44 @@ export function hmacHash(value: string): string {
   const key = getKey();
   return createHmac('sha256', key).update(value).digest('hex');
 }
+
+/**
+ * Encrypt a value as JSON. Returns the encrypted string, or undefined if falsy.
+ * Stored in Prisma Json columns as a string value.
+ */
+export function encryptJson(value: unknown): string | undefined {
+  if (!value) return undefined;
+  return encrypt(JSON.stringify(value));
+}
+
+/**
+ * Decrypt a field that may be:
+ * - null/undefined → returns undefined
+ * - an object → pre-migration unencrypted data, returned as-is
+ * - a string → encrypted data, decrypted + JSON.parsed
+ *
+ * Backwards-compatible: handles both encrypted and unencrypted data.
+ */
+export function decryptJsonField<T>(value: unknown): T | undefined {
+  if (value === null || value === undefined) return undefined;
+
+  // Pre-migration unencrypted data stored as a JSON object
+  if (typeof value === 'object') return value as T;
+
+  // Encrypted string
+  if (typeof value === 'string') {
+    try {
+      const decrypted = decrypt(value);
+      return JSON.parse(decrypted) as T;
+    } catch {
+      // Edge case: maybe a plain JSON string that wasn't encrypted
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return undefined;
+      }
+    }
+  }
+
+  return undefined;
+}

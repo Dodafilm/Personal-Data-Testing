@@ -29,6 +29,7 @@ function useCanvas(
   const rafRef = useRef<number>(0);
   const drawRef = useRef(draw);
   drawRef.current = draw;
+  const lastSize = useRef({ w: 0, h: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,27 +37,30 @@ function useCanvas(
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
     const start = performance.now();
     const loop = () => {
       const rect = canvas.getBoundingClientRect();
-      drawRef.current(ctx, rect.width, rect.height, (performance.now() - start) / 1000);
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+
+      // Resize canvas buffer when CSS size changes
+      if (w !== lastSize.current.w || h !== lastSize.current.h) {
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        lastSize.current = { w, h };
+      }
+
+      if (w > 0 && h > 0) {
+        drawRef.current(ctx, w, h, (performance.now() - start) / 1000);
+      }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      window.removeEventListener('resize', resize);
     };
   }, []);
 
@@ -66,131 +70,162 @@ function useCanvas(
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
-/* ── Sleep: constellation / star map ──────────────────── */
-
-function makeStar(w: number, h: number, stage: number) {
-  return {
-    x: Math.random() * w,
-    y: Math.random() * h,
-    stage,
-    brightness: stage === 1 ? 1 : stage === 3 ? 0.8 : stage === 4 ? 0.3 : 0.5,
-    size: stage === 1 ? 3 : stage === 3 ? 2.5 : 1.5,
-    vx: (Math.random() - 0.5) * 0.15,
-    vy: (Math.random() - 0.5) * 0.15,
+/* ── Sleep: planets (REM), moons (Deep), stars (Light) ── */
+// Seeded PRNG so positions are stable across frames for a given day.
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
   };
 }
-// Stars placed by sleep phase data, connected by faint lines. Deep sleep = bright blue,
-// REM = purple, Light = dim, Awake = red flicker. Gentle drift.
 
-function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: DayRecord | null; prevDay?: DayRecord | null }) {
-  type Star = { x: number; y: number; stage: number; brightness: number; size: number; vx: number; vy: number };
-  const starsRef = useRef<Star[]>([]);
-  const sizeRef = useRef({ w: 0, h: 0 });
-  const keyRef = useRef('');
-
+function SleepArt({ focusDay, prevDay }: { data: DayRecord[]; focusDay: DayRecord | null; prevDay?: DayRecord | null }) {
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => {
-    if (w < 1 || h < 1) return;
-
-    // Use previous night's sleep data, fall back to focus day
     const sleepDay = prevDay?.sleep ? prevDay : focusDay;
-    const key = `${sleepDay?.date ?? 'none'}-${w}-${h}`;
+    const sleep = sleepDay?.sleep;
 
-    // Re-init stars when day or canvas size changes
-    if (key !== keyRef.current) {
-      keyRef.current = key;
-      const stars: Star[] = [];
+    const deep = sleep?.deep_min ?? 45;
+    const rem = sleep?.rem_min ?? 60;
+    const light = sleep?.light_min ?? 180;
+    const awake = sleep?.awake_min ?? 15;
+    const efficiency = sleep?.efficiency ?? 80;
 
-      // Try to get phase data from this day or scan loaded data
-      const sources = sleepDay?.sleep ? [sleepDay] : data.filter(d => d.sleep);
+    // Seed from date string for stable positions
+    const dateStr = sleepDay?.date ?? 'default';
+    let seed = 0;
+    for (let i = 0; i < dateStr.length; i++) seed = seed * 31 + dateStr.charCodeAt(i);
+    const rng = seededRandom(Math.abs(seed) + 1);
 
-      for (const day of sources) {
-        if (!day.sleep) continue;
-        const phases = day.sleep.phases_5min?.split('|').map(Number).filter(n => !isNaN(n)) ?? [];
-        if (phases.length > 0) {
-          for (let i = 0; i < phases.length; i += 2) {
-            const stage = phases[i] || 2;
-            stars.push(makeStar(w, h, stage));
-          }
-        } else {
-          // No phases — generate stars from sleep metrics
-          const deep = day.sleep.deep_min ?? 0;
-          const rem = day.sleep.rem_min ?? 0;
-          const light = day.sleep.light_min ?? 0;
-          const awake = day.sleep.awake_min ?? 0;
-          for (let i = 0; i < Math.ceil(deep / 5); i++) stars.push(makeStar(w, h, 1));
-          for (let i = 0; i < Math.ceil(rem / 5); i++) stars.push(makeStar(w, h, 3));
-          for (let i = 0; i < Math.ceil(light / 8); i++) stars.push(makeStar(w, h, 2));
-          for (let i = 0; i < Math.ceil(awake / 10); i++) stars.push(makeStar(w, h, 4));
-        }
-        if (stars.length > 30) break; // enough from one good day
-      }
-
-      // Fallback: ambient stars
-      if (stars.length === 0) {
-        for (let i = 0; i < 80; i++) {
-          stars.push(makeStar(w, h, [1, 2, 3, 2][i % 4]));
-        }
-      }
-
-      starsRef.current = stars.slice(0, 200);
-      sizeRef.current = { w, h };
-    }
-
-    ctx.fillStyle = '#070714';
+    // Background — darker = better sleep
+    const bgBright = lerp(8, 20, 1 - efficiency / 100);
+    ctx.fillStyle = `rgb(${bgBright}, ${bgBright * 0.7}, ${bgBright * 1.5})`;
     ctx.fillRect(0, 0, w, h);
 
-    const stars = starsRef.current;
-    const stageColors: Record<number, string> = {
-      1: '#4a90d9', // deep
-      2: '#5c6b8a', // light
-      3: '#9b59b6', // REM
-      4: '#c0392b', // awake
-    };
+    // --- Light sleep = twinkling stars ---
+    const starCount = Math.max(15, Math.round(light / 3));
+    for (let i = 0; i < starCount; i++) {
+      const sx = rng() * w;
+      const sy = rng() * h;
+      const baseSize = 0.5 + rng() * 1.5;
+      const twinkle = 0.4 + 0.6 * Math.sin(t * (1.5 + rng() * 2) + i * 7.3);
+      const alpha = twinkle * (0.5 + rng() * 0.5);
 
-    // Draw connections
-    ctx.globalAlpha = 0.08;
-    for (let i = 0; i < stars.length; i++) {
-      for (let j = i + 1; j < Math.min(i + 10, stars.length); j++) {
-        const dx = stars[i].x - stars[j].x;
-        const dy = stars[i].y - stars[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
-          ctx.strokeStyle = stageColors[stars[i].stage] || '#5c6b8a';
-          ctx.lineWidth = 0.6;
-          ctx.beginPath();
-          ctx.moveTo(stars[i].x, stars[i].y);
-          ctx.lineTo(stars[j].x, stars[j].y);
-          ctx.stroke();
-        }
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#b8c6db';
+      ctx.beginPath();
+      ctx.arc(sx, sy, baseSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cross sparkle on brighter stars
+      if (baseSize > 1) {
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.strokeStyle = '#d0d8e8';
+        ctx.lineWidth = 0.5;
+        const len = baseSize * 3 * twinkle;
+        ctx.beginPath();
+        ctx.moveTo(sx - len, sy);
+        ctx.lineTo(sx + len, sy);
+        ctx.moveTo(sx, sy - len);
+        ctx.lineTo(sx, sy + len);
+        ctx.stroke();
       }
     }
 
-    // Draw and move stars
-    for (const s of stars) {
-      const twinkle = 0.6 + 0.4 * Math.sin(t * 1.5 + s.x * 0.03 + s.y * 0.02);
-      ctx.globalAlpha = s.brightness * twinkle;
-      ctx.fillStyle = stageColors[s.stage] || '#5c6b8a';
+    // --- Deep sleep = crescent moons ---
+    const moonCount = Math.max(1, Math.round(deep / 20));
+    for (let i = 0; i < moonCount; i++) {
+      const mx = w * 0.15 + rng() * w * 0.7;
+      const my = h * 0.15 + rng() * h * 0.7;
+      const radius = 10 + rng() * 18;
+      const drift = Math.sin(t * 0.3 + i * 2.5) * 4;
+      const bobY = my + drift;
+
+      // Moon body
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#4a90d9';
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.arc(mx, bobY, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Crescent shadow (offset circle to create crescent)
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = `rgb(${bgBright}, ${bgBright * 0.7}, ${bgBright * 1.5})`;
+      ctx.beginPath();
+      ctx.arc(mx + radius * 0.45, bobY - radius * 0.15, radius * 0.85, 0, Math.PI * 2);
       ctx.fill();
 
       // Glow
-      if (s.stage === 1 || s.stage === 3) {
-        ctx.globalAlpha = s.brightness * twinkle * 0.2;
+      ctx.globalAlpha = 0.12;
+      const moonGlow = ctx.createRadialGradient(mx, bobY, radius, mx, bobY, radius * 3);
+      moonGlow.addColorStop(0, '#4a90d9');
+      moonGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(mx, bobY, radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // --- REM = planets with ring/atmosphere ---
+    const planetCount = Math.max(1, Math.round(rem / 25));
+    for (let i = 0; i < planetCount; i++) {
+      const px = w * 0.2 + rng() * w * 0.6;
+      const py = h * 0.2 + rng() * h * 0.6;
+      const radius = 14 + rng() * 22;
+      const wobble = Math.sin(t * 0.2 + i * 3.7) * 3;
+      const drawY = py + wobble;
+      const hue = 270 + rng() * 40; // purple range
+
+      // Planet atmosphere glow
+      ctx.globalAlpha = 0.15;
+      const atmoGlow = ctx.createRadialGradient(px, drawY, radius * 0.5, px, drawY, radius * 2.5);
+      atmoGlow.addColorStop(0, `hsla(${hue}, 60%, 60%, 0.4)`);
+      atmoGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = atmoGlow;
+      ctx.beginPath();
+      ctx.arc(px, drawY, radius * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Planet body gradient
+      ctx.globalAlpha = 0.9;
+      const bodyGrad = ctx.createRadialGradient(
+        px - radius * 0.3, drawY - radius * 0.3, radius * 0.1,
+        px, drawY, radius,
+      );
+      bodyGrad.addColorStop(0, `hsla(${hue}, 50%, 70%, 1)`);
+      bodyGrad.addColorStop(0.7, `hsla(${hue}, 60%, 45%, 1)`);
+      bodyGrad.addColorStop(1, `hsla(${hue}, 70%, 25%, 1)`);
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.arc(px, drawY, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ring (ellipse)
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = `hsla(${hue + 20}, 50%, 65%, 0.6)`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(px, drawY, radius * 1.8, radius * 0.35, -0.2 + Math.sin(t * 0.1) * 0.05, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // --- Awake = faint red sparks ---
+    const sparkCount = Math.round(awake / 5);
+    for (let i = 0; i < sparkCount; i++) {
+      const sx = rng() * w;
+      const sy = rng() * h;
+      const flicker = Math.random(); // intentionally random for chaotic flicker
+      if (flicker > 0.6) {
+        ctx.globalAlpha = flicker * 0.4;
+        ctx.fillStyle = '#c0392b';
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
+        ctx.arc(sx, sy, 1 + flicker * 2, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      s.x += s.vx;
-      s.y += s.vy;
-      if (s.x < 0) s.x = w;
-      if (s.x > w) s.x = 0;
-      if (s.y < 0) s.y = h;
-      if (s.y > h) s.y = 0;
     }
+
     ctx.globalAlpha = 1;
-  }, [data, focusDay, prevDay]);
+  }, [focusDay, prevDay]);
 
   const canvasRef = useCanvas(draw);
 

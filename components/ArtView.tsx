@@ -67,60 +67,73 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
 /* ── Sleep: constellation / star map ──────────────────── */
+
+function makeStar(w: number, h: number, stage: number) {
+  return {
+    x: Math.random() * w,
+    y: Math.random() * h,
+    stage,
+    brightness: stage === 1 ? 1 : stage === 3 ? 0.8 : stage === 4 ? 0.3 : 0.5,
+    size: stage === 1 ? 3 : stage === 3 ? 2.5 : 1.5,
+    vx: (Math.random() - 0.5) * 0.15,
+    vy: (Math.random() - 0.5) * 0.15,
+  };
+}
 // Stars placed by sleep phase data, connected by faint lines. Deep sleep = bright blue,
 // REM = purple, Light = dim, Awake = red flicker. Gentle drift.
 
 function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: DayRecord | null; prevDay?: DayRecord | null }) {
-  const starsRef = useRef<{ x: number; y: number; stage: number; brightness: number; size: number; vx: number; vy: number }[]>([]);
-  const initRef = useRef(false);
-  // Reset stars when the focused day changes
-  const lastDateRef = useRef<string>('');
-  const sleepDate = prevDay?.date ?? focusDay?.date ?? '';
-  if (sleepDate !== lastDateRef.current) {
-    initRef.current = false;
-    lastDateRef.current = sleepDate;
-  }
+  type Star = { x: number; y: number; stage: number; brightness: number; size: number; vx: number; vy: number };
+  const starsRef = useRef<Star[]>([]);
+  const sizeRef = useRef({ w: 0, h: 0 });
+  const keyRef = useRef('');
 
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => {
+    if (w < 1 || h < 1) return;
+
     // Use previous night's sleep data, fall back to focus day
     const sleepDay = prevDay?.sleep ? prevDay : focusDay;
+    const key = `${sleepDay?.date ?? 'none'}-${w}-${h}`;
 
-    // Initialize stars from data
-    if (!initRef.current || starsRef.current.length === 0) {
-      const stars: typeof starsRef.current = [];
-      // Prefer the single sleep day, otherwise scan all data
-      const days = sleepDay?.sleep ? [sleepDay] : data.filter(d => d.sleep);
-      for (const day of days) {
+    // Re-init stars when day or canvas size changes
+    if (key !== keyRef.current) {
+      keyRef.current = key;
+      const stars: Star[] = [];
+
+      // Try to get phase data from this day or scan loaded data
+      const sources = sleepDay?.sleep ? [sleepDay] : data.filter(d => d.sleep);
+
+      for (const day of sources) {
         if (!day.sleep) continue;
-        const phases = day.sleep.phases_5min?.split('|').map(Number) ?? [];
-        for (let i = 0; i < phases.length; i += 3) {
-          const stage = phases[i] || 2;
-          stars.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            stage,
-            brightness: stage === 1 ? 1 : stage === 3 ? 0.8 : stage === 4 ? 0.3 : 0.5,
-            size: stage === 1 ? 3 : stage === 3 ? 2.5 : 1.5,
-            vx: (Math.random() - 0.5) * 0.15,
-            vy: (Math.random() - 0.5) * 0.15,
-          });
+        const phases = day.sleep.phases_5min?.split('|').map(Number).filter(n => !isNaN(n)) ?? [];
+        if (phases.length > 0) {
+          for (let i = 0; i < phases.length; i += 2) {
+            const stage = phases[i] || 2;
+            stars.push(makeStar(w, h, stage));
+          }
+        } else {
+          // No phases — generate stars from sleep metrics
+          const deep = day.sleep.deep_min ?? 0;
+          const rem = day.sleep.rem_min ?? 0;
+          const light = day.sleep.light_min ?? 0;
+          const awake = day.sleep.awake_min ?? 0;
+          for (let i = 0; i < Math.ceil(deep / 5); i++) stars.push(makeStar(w, h, 1));
+          for (let i = 0; i < Math.ceil(rem / 5); i++) stars.push(makeStar(w, h, 3));
+          for (let i = 0; i < Math.ceil(light / 8); i++) stars.push(makeStar(w, h, 2));
+          for (let i = 0; i < Math.ceil(awake / 10); i++) stars.push(makeStar(w, h, 4));
         }
+        if (stars.length > 30) break; // enough from one good day
       }
+
+      // Fallback: ambient stars
       if (stars.length === 0) {
-        // Fallback: generate ambient stars
         for (let i = 0; i < 80; i++) {
-          stars.push({
-            x: Math.random() * w, y: Math.random() * h,
-            stage: [1, 2, 3, 4][Math.floor(Math.random() * 4)],
-            brightness: 0.3 + Math.random() * 0.7,
-            size: 1 + Math.random() * 2,
-            vx: (Math.random() - 0.5) * 0.15,
-            vy: (Math.random() - 0.5) * 0.15,
-          });
+          stars.push(makeStar(w, h, [1, 2, 3, 2][i % 4]));
         }
       }
-      starsRef.current = stars.slice(0, 200); // cap
-      initRef.current = true;
+
+      starsRef.current = stars.slice(0, 200);
+      sizeRef.current = { w, h };
     }
 
     ctx.fillStyle = '#070714';
@@ -135,15 +148,15 @@ function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: Da
     };
 
     // Draw connections
-    ctx.globalAlpha = 0.06;
+    ctx.globalAlpha = 0.08;
     for (let i = 0; i < stars.length; i++) {
-      for (let j = i + 1; j < Math.min(i + 8, stars.length); j++) {
+      for (let j = i + 1; j < Math.min(i + 10, stars.length); j++) {
         const dx = stars[i].x - stars[j].x;
         const dy = stars[i].y - stars[j].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100) {
+        if (dist < 120) {
           ctx.strokeStyle = stageColors[stars[i].stage] || '#5c6b8a';
-          ctx.lineWidth = 0.5;
+          ctx.lineWidth = 0.6;
           ctx.beginPath();
           ctx.moveTo(stars[i].x, stars[i].y);
           ctx.lineTo(stars[j].x, stars[j].y);
@@ -154,7 +167,7 @@ function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: Da
 
     // Draw and move stars
     for (const s of stars) {
-      const twinkle = 0.6 + 0.4 * Math.sin(t * 1.5 + s.x * 0.01 + s.y * 0.01);
+      const twinkle = 0.6 + 0.4 * Math.sin(t * 1.5 + s.x * 0.03 + s.y * 0.02);
       ctx.globalAlpha = s.brightness * twinkle;
       ctx.fillStyle = stageColors[s.stage] || '#5c6b8a';
       ctx.beginPath();
@@ -163,7 +176,7 @@ function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: Da
 
       // Glow
       if (s.stage === 1 || s.stage === 3) {
-        ctx.globalAlpha = s.brightness * twinkle * 0.15;
+        ctx.globalAlpha = s.brightness * twinkle * 0.2;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size * 4, 0, Math.PI * 2);
         ctx.fill();
@@ -359,16 +372,20 @@ function ActivityArt({ data, focusDay }: { data: DayRecord[]; focusDay: DayRecor
 
 function StressArt({ data, focusDay }: { data: DayRecord[]; focusDay: DayRecord | null }) {
   const linesRef = useRef<{ points: { x: number; y: number }[]; hue: number; speed: number }[]>([]);
-  const initRef = useRef(false);
+  const keyRef = useRef('');
 
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => {
+    if (w < 1 || h < 1) return;
+
     const stressHigh = focusDay?.stress?.stress_high ?? 60;
     const recoveryHigh = focusDay?.stress?.recovery_high ?? 120;
     const total = stressHigh + recoveryHigh || 1;
     const stressRatio = stressHigh / total; // 0 = fully recovered, 1 = fully stressed
     const turbulence = lerp(0.3, 2.5, stressRatio);
 
-    if (!initRef.current || linesRef.current.length === 0) {
+    const key = `${focusDay?.date ?? 'none'}-${w}-${h}`;
+    if (key !== keyRef.current) {
+      keyRef.current = key;
       const lines: typeof linesRef.current = [];
       const count = 25;
       for (let i = 0; i < count; i++) {
@@ -384,7 +401,6 @@ function StressArt({ data, focusDay }: { data: DayRecord[]; focusDay: DayRecord 
         });
       }
       linesRef.current = lines;
-      initRef.current = true;
     }
 
     ctx.fillStyle = `rgba(10, 8, 15, 0.08)`;

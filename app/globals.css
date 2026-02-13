@@ -1799,6 +1799,39 @@ body {
   color: var(--accent-secondary);
 }
 
+.viewer-mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-right: 4px;
+}
+
+.viewer-mode-btn {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: none;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.viewer-mode-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.viewer-mode-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.viewer-mode-btn:hover:not(.active) {
+  background: var(--bg-card-hover);
+}
+
 /* ===== Consent Toggle (Settings) ===== */
 .consent-toggle {
   display: flex;

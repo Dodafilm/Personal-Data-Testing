@@ -41,11 +41,13 @@ export default function DashboardPage() {
 
   // Viewer state for admin/artist
   const userRole: UserRole = (session?.user as { role?: UserRole } | undefined)?.role || 'user';
+  const [viewMode, setViewMode] = useState<'user' | 'admin' | 'artist'>('admin');
   const [availableUsers, setAvailableUsers] = useState<{ id: string; label: string; name?: string; email?: string }[]>([]);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [viewingUserLabel, setViewingUserLabel] = useState<string>('');
   const [viewedData, setViewedData] = useState<DayRecord[]>([]);
   const isViewingOther = !!viewingUserId;
+  const canSwitchMode = userRole === 'admin'; // admins can toggle between admin/artist view
 
   // Handle date picker changing to a different date
   const handleDateChange = useCallback((y: number, m: number, d: number) => {
@@ -160,14 +162,20 @@ export default function DashboardPage() {
   }, [session?.user]);
 
   // Fetch available users for admin/artist viewer
+  // For admins: re-fetch when viewMode toggles between admin/artist
+  const activeViewMode = userRole === 'admin'
+    ? (viewMode === 'user' ? null : viewMode)
+    : (userRole === 'artist' ? 'artist' : null);
   useEffect(() => {
-    if (!session?.user || userRole === 'user') {
+    if (!session?.user || !activeViewMode) {
       setAvailableUsers([]);
       setViewingUserId(null);
       return;
     }
 
-    const endpoint = userRole === 'admin' ? '/api/admin/users' : '/api/artist/users';
+    const endpoint = activeViewMode === 'admin' ? '/api/admin/users' : '/api/artist/users';
+    setViewingUserId(null);
+    setViewedData([]);
     fetch(endpoint)
       .then(r => r.ok ? r.json() : [])
       .then((users: { id: string; label?: string; name?: string; email?: string }[]) => {
@@ -179,7 +187,7 @@ export default function DashboardPage() {
         })));
       })
       .catch(() => setAvailableUsers([]));
-  }, [session?.user, userRole]);
+  }, [session?.user, activeViewMode]);
 
   // Fetch viewed user's data when selection changes
   useEffect(() => {
@@ -289,28 +297,52 @@ export default function DashboardPage() {
         <SyncPrompt />
 
         {/* Viewer selector for admin/artist */}
-        {(userRole === 'admin' || userRole === 'artist') && availableUsers.length > 0 && (
+        {(userRole === 'admin' || userRole === 'artist') && (
           <div className="viewer-selector-bar">
-            <span className="viewer-label">
-              Viewing:
-            </span>
-            <select
-              className="viewer-select"
-              value={viewingUserId || ''}
-              onChange={e => {
-                const id = e.target.value || null;
-                setViewingUserId(id);
-                const user = availableUsers.find(u => u.id === id);
-                setViewingUserLabel(user?.label || '');
-              }}
-            >
-              <option value="">My Data</option>
-              {availableUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.label}</option>
-              ))}
-            </select>
-            {isViewingOther && (
-              <span className="viewer-badge">{userRole === 'admin' ? 'Admin View' : 'Artist View'}</span>
+            {canSwitchMode && (
+              <div className="viewer-mode-toggle">
+                <button
+                  className={`viewer-mode-btn ${viewMode === 'user' ? 'active' : ''}`}
+                  onClick={() => setViewMode('user')}
+                >
+                  User
+                </button>
+                <button
+                  className={`viewer-mode-btn ${viewMode === 'admin' ? 'active' : ''}`}
+                  onClick={() => setViewMode('admin')}
+                >
+                  Admin
+                </button>
+                <button
+                  className={`viewer-mode-btn ${viewMode === 'artist' ? 'active' : ''}`}
+                  onClick={() => setViewMode('artist')}
+                >
+                  Artist
+                </button>
+              </div>
+            )}
+            {activeViewMode && (
+              <>
+                <span className="viewer-label">Viewing:</span>
+                <select
+                  className="viewer-select"
+                  value={viewingUserId || ''}
+                  onChange={e => {
+                    const id = e.target.value || null;
+                    setViewingUserId(id);
+                    const user = availableUsers.find(u => u.id === id);
+                    setViewingUserLabel(user?.label || '');
+                  }}
+                >
+                  <option value="">My Data</option>
+                  {availableUsers.map(u => (
+                    <option key={u.id} value={u.id}>{u.label}</option>
+                  ))}
+                </select>
+                {isViewingOther && (
+                  <span className="viewer-badge">{activeViewMode === 'admin' ? 'Admin View' : 'Artist View'}</span>
+                )}
+              </>
             )}
           </div>
         )}

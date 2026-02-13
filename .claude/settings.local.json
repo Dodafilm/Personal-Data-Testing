@@ -37,7 +37,12 @@
       "Bash(java:*)",
       "Bash(git stash:*)",
       "Bash(git status:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git reset:*)",
+      "Bash(git update-ref:*)",
+      "Bash(git reflog expire:*)",
+      "Bash(git gc:*)",
+      "Bash(git push:*)"
     ]
   }
 }

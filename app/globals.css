@@ -1872,6 +1872,52 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* ===== Art View (4-panel grid) ===== */
+.art-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+  height: calc(100vh - 100px);
+  padding: 4px 0;
+}
+
+@media (max-width: 768px) {
+  .art-view {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    height: auto;
+  }
+}
+
+.art-window {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.art-window-label {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.25);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.art-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* ===== Dashboard Tab Toggle (Data/Goals/Art) ===== */
 .dash-tab-toggle {
   display: flex;

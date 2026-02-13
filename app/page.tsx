@@ -10,6 +10,7 @@ import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import DashboardHeader from '@/components/DashboardHeader';
 import type { DashboardTab } from '@/components/DashboardHeader';
 import GoalsPanel from '@/components/GoalsPanel';
+import ArtView from '@/components/ArtView';
 import SettingsPanel from '@/components/SettingsPanel';
 import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
@@ -404,6 +405,10 @@ export default function DashboardPage() {
             settings={settings}
             onUpdateSettings={updateSettings}
           />
+        )}
+
+        {activeTab === 'art' && (
+          <ArtView data={displayData} focusDay={displayDayRecord} />
         )}
       </div>
 

@@ -8,6 +8,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useOuraConnection } from '@/hooks/useOuraConnection';
 import { useGoogleCalendar } from '@/hooks/useGoogleCalendar';
 import DashboardHeader from '@/components/DashboardHeader';
+import type { DashboardTab } from '@/components/DashboardHeader';
+import GoalsPanel from '@/components/GoalsPanel';
 import SettingsPanel from '@/components/SettingsPanel';
 import DayDetail from '@/components/DayDetail';
 import SleepCharts from '@/components/charts/SleepCharts';
@@ -38,6 +40,8 @@ export default function DashboardPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
   const [debugData, setDebugData] = useState(true);
+  const [activeTab, setActiveTab] = useState<DashboardTab>('data');
+  const artMode = activeTab === 'art';
 
   // Viewer state for admin/artist
   const userRole: UserRole = (session?.user as { role?: UserRole } | undefined)?.role || 'user';
@@ -256,7 +260,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <ThreeBackground effect={bgEffect} data={monthData.data} />
+      <ThreeBackground effect={bgEffect} data={displayData} artMode={artMode} />
 
       <SettingsPanel
         open={settingsOpen}
@@ -282,7 +286,7 @@ export default function DashboardPage() {
         onGcalSelectedIdsChange={gcal.setSelectedIds}
       />
 
-      <div className="dashboard">
+      <div className={`dashboard${artMode ? ' art-mode' : ''}`}>
         <DashboardHeader
           label={monthData.label}
           onPrev={monthData.prevMonth}
@@ -292,12 +296,14 @@ export default function DashboardPage() {
           month={monthData.month}
           selectedDay={monthData.day}
           onDateChange={handleDateChange}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
 
-        <SyncPrompt />
+        {activeTab === 'data' && <SyncPrompt />}
 
         {/* Viewer selector for admin/artist */}
-        {(userRole === 'admin' || userRole === 'artist') && (
+        {activeTab === 'data' && (userRole === 'admin' || userRole === 'artist') && (
           <div className="viewer-selector-bar">
             {canSwitchMode && (
               <div className="viewer-mode-toggle">
@@ -347,48 +353,56 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Intraday 24h Section */}
-        <section className="metric-section">
-          <h2 className="section-title">24-Hour View</h2>
-          <DayIntraday
-            day={displayDayRecord}
-            prevDay={displayPrevDay}
-            onDayUpdated={isViewingOther ? undefined : monthData.refresh}
-            gcalEvents={isViewingOther ? [] : gcalEvents}
-            readOnly={isViewingOther}
-          />
-        </section>
+        {activeTab === 'data' && (
+          <>
+            {/* Intraday 24h Section */}
+            <section className="metric-section">
+              <h2 className="section-title">24-Hour View</h2>
+              <DayIntraday
+                day={displayDayRecord}
+                prevDay={displayPrevDay}
+                onDayUpdated={isViewingOther ? undefined : monthData.refresh}
+                gcalEvents={isViewingOther ? [] : gcalEvents}
+                readOnly={isViewingOther}
+              />
+            </section>
 
-        {/* Sleep Section */}
-        <section className="metric-section">
-          <h2 className="section-title sleep">Sleep</h2>
-          <SleepCharts data={displayData} onDayClick={setSelectedDay} />
-          <SleepOverlay data={displayData} />
-        </section>
+            {/* Sleep Section */}
+            <section className="metric-section">
+              <h2 className="section-title sleep">Sleep</h2>
+              <SleepCharts data={displayData} onDayClick={setSelectedDay} />
+              <SleepOverlay data={displayData} />
+            </section>
 
-        {/* Heart Rate Section */}
-        <section className="metric-section">
-          <h2 className="section-title heart">Heart Rate</h2>
-          <HeartCharts data={displayData} onDayClick={setSelectedDay} />
-          <HeartRateOverlay data={displayData} />
-        </section>
+            {/* Heart Rate Section */}
+            <section className="metric-section">
+              <h2 className="section-title heart">Heart Rate</h2>
+              <HeartCharts data={displayData} onDayClick={setSelectedDay} />
+              <HeartRateOverlay data={displayData} />
+            </section>
 
-        {/* Activity Section */}
-        <section className="metric-section">
-          <h2 className="section-title workout">Activity</h2>
-          <ActivityCharts data={displayData} onDayClick={setSelectedDay} />
-          <ActivityOverlay data={displayData} />
-        </section>
+            {/* Activity Section */}
+            <section className="metric-section">
+              <h2 className="section-title workout">Activity</h2>
+              <ActivityCharts data={displayData} onDayClick={setSelectedDay} />
+              <ActivityOverlay data={displayData} />
+            </section>
 
-        {/* Stress Section */}
-        <section className="metric-section">
-          <h2 className="section-title stress">Stress</h2>
-          <StressCharts data={displayData} onDayClick={setSelectedDay} />
-        </section>
+            {/* Stress Section */}
+            <section className="metric-section">
+              <h2 className="section-title stress">Stress</h2>
+              <StressCharts data={displayData} onDayClick={setSelectedDay} />
+            </section>
+          </>
+        )}
+
+        {activeTab === 'goals' && (
+          <GoalsPanel data={displayData} settings={settings} onUpdateSettings={updateSettings} />
+        )}
       </div>
 
       <DayDetail
-        open={!!selectedDay}
+        open={!artMode && !!selectedDay}
         day={displayData.find(d => d.date === selectedDay) ?? null}
         monthData={displayData}
         onClose={() => setSelectedDay(null)}

@@ -6,9 +6,10 @@ import type { DayRecord } from '@/lib/types';
 interface ThreeBackgroundProps {
   effect: string;
   data: DayRecord[];
+  artMode?: boolean;
 }
 
-export default function ThreeBackground({ effect, data }: ThreeBackgroundProps) {
+export default function ThreeBackground({ effect, data, artMode }: ThreeBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const managerRef = useRef<{ setEffect: (name: string) => void; updateData: (d: DayRecord[]) => void; dispose: () => void } | null>(null);
   const effectRef = useRef(effect);
@@ -82,7 +83,7 @@ export default function ThreeBackground({ effect, data }: ThreeBackgroundProps) 
 
   return (
     <>
-      <canvas ref={canvasRef} className="bg-canvas" />
+      <canvas ref={canvasRef} className={`bg-canvas${artMode ? ' art-mode' : ''}`} />
       {error && (
         <div style={{ position: 'fixed', top: 10, left: 10, color: 'red', zIndex: 9999, fontSize: 12, background: 'rgba(0,0,0,0.8)', padding: 8, borderRadius: 4 }}>
           3D Error: {error}

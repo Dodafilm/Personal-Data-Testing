@@ -84,6 +84,13 @@ export interface DayRecord {
   events?: HealthEvent[];
 }
 
+export interface HealthGoal {
+  metric: string;           // e.g. 'sleep_hours', 'steps', 'hrv_avg'
+  label: string;
+  target: number;
+  unit: string;
+}
+
 export interface Settings {
   bgEffect?: string;
   ouraClientId?: string;
@@ -92,5 +99,6 @@ export interface Settings {
   oauthState?: string;
   allowAdmin?: boolean;
   allowArtist?: boolean;
+  goals?: HealthGoal[];
   [key: string]: unknown;
 }

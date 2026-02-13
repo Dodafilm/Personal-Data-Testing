@@ -408,7 +408,7 @@ export default function DashboardPage() {
         )}
 
         {activeTab === 'art' && (
-          <ArtView data={displayData} focusDay={displayDayRecord} />
+          <ArtView data={displayData} focusDay={displayDayRecord} prevDay={displayPrevDay} />
         )}
       </div>
 

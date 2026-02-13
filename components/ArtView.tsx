@@ -6,12 +6,13 @@ import type { DayRecord } from '@/lib/types';
 interface ArtViewProps {
   data: DayRecord[];
   focusDay: DayRecord | null;
+  prevDay?: DayRecord | null;
 }
 
-export default function ArtView({ data, focusDay }: ArtViewProps) {
+export default function ArtView({ data, focusDay, prevDay }: ArtViewProps) {
   return (
     <div className="art-view">
-      <SleepArt data={data} focusDay={focusDay} />
+      <SleepArt data={data} focusDay={focusDay} prevDay={prevDay} />
       <HeartArt data={data} focusDay={focusDay} />
       <ActivityArt data={data} focusDay={focusDay} />
       <StressArt data={data} focusDay={focusDay} />
@@ -69,15 +70,26 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 // Stars placed by sleep phase data, connected by faint lines. Deep sleep = bright blue,
 // REM = purple, Light = dim, Awake = red flicker. Gentle drift.
 
-function SleepArt({ data, focusDay }: { data: DayRecord[]; focusDay: DayRecord | null }) {
+function SleepArt({ data, focusDay, prevDay }: { data: DayRecord[]; focusDay: DayRecord | null; prevDay?: DayRecord | null }) {
   const starsRef = useRef<{ x: number; y: number; stage: number; brightness: number; size: number; vx: number; vy: number }[]>([]);
   const initRef = useRef(false);
+  // Reset stars when the focused day changes
+  const lastDateRef = useRef<string>('');
+  const sleepDate = prevDay?.date ?? focusDay?.date ?? '';
+  if (sleepDate !== lastDateRef.current) {
+    initRef.current = false;
+    lastDateRef.current = sleepDate;
+  }
 
   const draw = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => {
+    // Use previous night's sleep data, fall back to focus day
+    const sleepDay = prevDay?.sleep ? prevDay : focusDay;
+
     // Initialize stars from data
     if (!initRef.current || starsRef.current.length === 0) {
       const stars: typeof starsRef.current = [];
-      const days = data.length > 0 ? data : (focusDay ? [focusDay] : []);
+      // Prefer the single sleep day, otherwise scan all data
+      const days = sleepDay?.sleep ? [sleepDay] : data.filter(d => d.sleep);
       for (const day of days) {
         if (!day.sleep) continue;
         const phases = day.sleep.phases_5min?.split('|').map(Number) ?? [];
@@ -165,7 +177,7 @@ function SleepArt({ data, focusDay }: { data: DayRecord[]; focusDay: DayRecord |
       if (s.y > h) s.y = 0;
     }
     ctx.globalAlpha = 1;
-  }, [data, focusDay]);
+  }, [data, focusDay, prevDay]);
 
   const canvasRef = useCanvas(draw);
 

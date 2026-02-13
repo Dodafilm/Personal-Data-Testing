@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
+import { hashApiKey } from '@/lib/api-utils';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,10 +32,11 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const newApiKey = randomUUID();
+  const keyHash = hashApiKey(newApiKey);
 
   await prisma.installation.update({
     where: { id },
-    data: { apiKey: newApiKey },
+    data: { apiKey: keyHash },
   });
 
   audit({

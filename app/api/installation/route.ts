@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { audit, getClientIp } from '@/lib/audit';
-import { parseJsonBody, isErrorResponse, maskApiKey } from '@/lib/api-utils';
+import { parseJsonBody, isErrorResponse, maskApiKey, hashApiKey } from '@/lib/api-utils';
 
 const VALID_ROOMS = ['room-1', 'room-2', 'room-3', 'room-4'];
 const VALID_SCOPES = ['sleep', 'heart', 'workout', 'stress'];
@@ -98,11 +99,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'timeoutMin must be between 1 and 1440' }, { status: 400 });
   }
 
+  // Generate API key, store only the hash
+  const plaintextKey = randomUUID();
+  const keyHash = hashApiKey(plaintextKey);
+
   const installation = await prisma.installation.create({
     data: {
       artistId: session.user.id,
       name,
       room,
+      apiKey: keyHash,
       dataScopes,
       timeoutMin: timeout,
     },
@@ -116,12 +122,13 @@ export async function POST(request: Request) {
     ip: getClientIp(request),
   });
 
+  // Return the plaintext key — this is the only time it's shown
   return NextResponse.json({
     id: installation.id,
     artistId: installation.artistId,
     name: installation.name,
     room: installation.room,
-    apiKey: installation.apiKey,
+    apiKey: plaintextKey,
     dataScopes: installation.dataScopes,
     active: installation.active,
     timeoutMin: installation.timeoutMin,

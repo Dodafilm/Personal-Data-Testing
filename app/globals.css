@@ -1871,6 +1871,29 @@ body {
   margin: 2px 0 10px 26px;
 }
 
+.consent-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+
+.consent-details {
+  margin: 8px 0 0 26px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.consent-details p {
+  margin-bottom: 2px;
+}
+
+.consent-details strong {
+  color: var(--text-secondary);
+}
+
 /* ===== Art Mode ===== */
 .dashboard.art-mode {
   position: relative;
@@ -2592,6 +2615,120 @@ body {
 .btn-sm {
   font-size: 0.75rem;
   padding: 4px 10px;
+}
+
+/* ===== Audit Log ===== */
+.audit-log {
+  margin-top: 8px;
+}
+
+.audit-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.audit-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-size: 0.82rem;
+}
+
+.audit-entry:nth-child(even) {
+  background: transparent;
+}
+
+.audit-icon {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  background: var(--text-muted);
+}
+
+.audit-icon-eye { background: var(--accent-primary); }
+.audit-icon-shield { background: var(--accent-stress); }
+.audit-icon-login { background: var(--accent-workout); }
+.audit-icon-logout { background: var(--text-muted); }
+.audit-icon-key { background: var(--accent-secondary); }
+.audit-icon-warning { background: var(--accent-danger); }
+.audit-icon-trash { background: var(--accent-danger); }
+
+.audit-entry-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.audit-label {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.audit-resource {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+.audit-time {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.audit-ip {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-family: monospace;
+}
+
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.audit-page-info {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ===== Delete Account Form ===== */
+.delete-account-form label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.delete-account-form input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.delete-account-form input:focus {
+  border-color: var(--accent-danger);
+  outline: none;
 }
 
 /* ===== Legal Pages (Privacy & Terms) ===== */

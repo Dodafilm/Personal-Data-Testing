@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { hmacHash, decryptJsonField, encryptJson } from '@/lib/crypto';
 import { audit, getClientIp } from '@/lib/audit';
 import { checkRateLimit, rateLimitKey, RATE_LIMITS } from '@/lib/rate-limit';
+import { verifyApiKey } from '@/lib/api-utils';
 import type { HealthEvent } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
@@ -35,7 +36,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const installation = await prisma.installation.findUnique({ where: { id } });
 
-  if (!installation || installation.apiKey !== apiKey) {
+  if (!installation || !verifyApiKey(apiKey, installation.apiKey)) {
     return NextResponse.json({ error: 'Invalid API key or installation' }, { status: 403 });
   }
 

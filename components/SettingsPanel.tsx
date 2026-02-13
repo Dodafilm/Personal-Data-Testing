@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import type { Settings, UserRole } from '@/lib/types';
 import { normalizeJson, normalizeCsv, parseCsvString } from '@/lib/data-adapter';
 import { useStore } from '@/lib/store-provider';
 import InstallationManager from './InstallationManager';
 import DeviceManager from './DeviceManager';
+import AuditLog from './AuditLog';
 
 function useOrigin() {
   const [origin, setOrigin] = useState('');
@@ -81,6 +82,13 @@ export default function SettingsPanel({
   const [shareScopes, setShareScopes] = useState<string[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // Delete account state
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteExpanded, setDeleteExpanded] = useState(false);
 
   useEffect(() => {
     if (!startDate || !endDate) {
@@ -195,6 +203,39 @@ export default function SettingsPanel({
     }
   }, [onDataImported]);
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== 'DELETE MY ACCOUNT') {
+      setDeleteError('Please type "DELETE MY ACCOUNT" exactly to confirm.');
+      return;
+    }
+    setDeleteError('');
+    setDeleteLoading(true);
+
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmation: deleteConfirmation,
+          ...(deletePassword ? { password: deletePassword } : {}),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setDeleteError(data.error || 'Failed to delete account.');
+        setDeleteLoading(false);
+        return;
+      }
+
+      // Account deleted — sign out and redirect
+      await signOut({ callbackUrl: '/login' });
+    } catch {
+      setDeleteError('Something went wrong. Please try again.');
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <>
       <div className={`settings-overlay${open ? ' active' : ''}`} onClick={onClose} />
@@ -245,28 +286,53 @@ export default function SettingsPanel({
           {session?.user && (
             <div className="setting-group">
               <h3>Data Access Consent</h3>
-              <label className="consent-toggle">
-                <input
-                  type="checkbox"
-                  checked={!!settings.allowAdmin}
-                  onChange={e => onUpdateSettings({ allowAdmin: e.target.checked })}
-                />
-                Allow Admin Access
-              </label>
-              <p className="consent-hint">
-                Let the site admin view your health data (name and email visible).
+              <p className="setting-hint">
+                Control who can access your health data. Changes take effect immediately and can be revoked at any time.
               </p>
-              <label className="consent-toggle">
-                <input
-                  type="checkbox"
-                  checked={!!settings.allowArtist}
-                  onChange={e => onUpdateSettings({ allowArtist: e.target.checked })}
-                />
-                Allow Artist Access (anonymous)
-              </label>
-              <p className="consent-hint">
-                Let artists view your anonymized health data. Your identity is never shared.
+
+              <div className="consent-card">
+                <label className="consent-toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.allowAdmin}
+                    onChange={e => onUpdateSettings({ allowAdmin: e.target.checked })}
+                  />
+                  Allow Admin Access
+                </label>
+                <div className="consent-details">
+                  <p><strong>What is shared:</strong> sleep, heart rate, workout, and stress data</p>
+                  <p><strong>Who can see it:</strong> the site administrator</p>
+                  <p><strong>Identification:</strong> your name and email are visible to the admin</p>
+                </div>
+              </div>
+
+              <div className="consent-card">
+                <label className="consent-toggle">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.allowArtist}
+                    onChange={e => onUpdateSettings({ allowArtist: e.target.checked })}
+                  />
+                  Allow Artist Access
+                </label>
+                <div className="consent-details">
+                  <p><strong>What is shared:</strong> only the data scopes configured per installation (e.g., heart rate only)</p>
+                  <p><strong>Who can see it:</strong> artists running installations you check in to</p>
+                  <p><strong>Identification:</strong> fully anonymous &mdash; artists see &ldquo;Participant A&rdquo;, never your name or email</p>
+                  <p><strong>Duration:</strong> only while you are checked in (sessions auto-expire)</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Activity Log (signed-in users only) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Activity Log</h3>
+              <p className="setting-hint">
+                A record of who accessed your data, consent changes, logins, and installation activity.
               </p>
+              <AuditLog />
             </div>
           )}
 
@@ -513,6 +579,69 @@ export default function SettingsPanel({
               <p className="setting-hint">
                 Load sample data to preview the dashboard. Turn off to clear placeholder records.
               </p>
+            </div>
+          )}
+
+          {/* Delete Account (signed-in users only) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Delete Account</h3>
+              {!deleteExpanded ? (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => setDeleteExpanded(true)}
+                >
+                  Delete My Account
+                </button>
+              ) : (
+                <div className="delete-account-form">
+                  <p className="setting-hint" style={{ color: 'var(--accent-danger)' }}>
+                    This will permanently delete your account and all associated data
+                    (health records, devices, installations, sessions). This action cannot be undone.
+                  </p>
+                  <label>
+                    Password
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={e => setDeletePassword(e.target.value)}
+                      placeholder="Enter your password to confirm"
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <label>
+                    Type <strong>DELETE MY ACCOUNT</strong> to confirm
+                    <input
+                      type="text"
+                      value={deleteConfirmation}
+                      onChange={e => setDeleteConfirmation(e.target.value)}
+                      placeholder="DELETE MY ACCOUNT"
+                      autoComplete="off"
+                    />
+                  </label>
+                  {deleteError && <div className="auth-error">{deleteError}</div>}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button
+                      className="btn btn-danger"
+                      onClick={handleDeleteAccount}
+                      disabled={deleteLoading || deleteConfirmation !== 'DELETE MY ACCOUNT'}
+                    >
+                      {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setDeleteExpanded(false);
+                        setDeleteConfirmation('');
+                        setDeletePassword('');
+                        setDeleteError('');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

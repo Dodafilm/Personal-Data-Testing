@@ -62,6 +62,13 @@ export async function cloudSaveSettings(patch: Partial<Settings>): Promise<void>
   });
 }
 
+/** Fetch another user's data by date range (for admin/artist viewing) */
+export async function fetchUserDateRange(userId: string, start: string, end: string): Promise<DayRecord[]> {
+  const res = await fetch(`/api/health/records?userId=${userId}&start=${start}&end=${end}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export async function cloudSyncFromLocal(records: DayRecord[]): Promise<{ synced: number }> {
   const res = await fetch('/api/health/sync', {
     method: 'POST',

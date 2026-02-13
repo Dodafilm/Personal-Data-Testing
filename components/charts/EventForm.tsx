@@ -7,6 +7,14 @@ const CATEGORIES: { value: EventCategory; label: string }[] = [
   { value: 'activity', label: 'Activity' },
   { value: 'sleep', label: 'Sleep' },
   { value: 'health-note', label: 'Health Note' },
+  { value: 'experience', label: 'Experience' },
+];
+
+const ROOMS = [
+  { value: 'room-1', label: 'Room 1' },
+  { value: 'room-2', label: 'Room 2' },
+  { value: 'room-3', label: 'Room 3' },
+  { value: 'room-4', label: 'Room 4' },
 ];
 
 // Web Speech API types
@@ -52,6 +60,7 @@ export default function EventForm({ initial, dreamMode, onSave, onCancel }: Even
   const [title, setTitle] = useState(initial?.title || (dreamMode ? 'Dream' : ''));
   const [category, setCategory] = useState<EventCategory>(initial?.category || (dreamMode ? 'sleep' : 'activity'));
   const [description, setDescription] = useState(initial?.description || '');
+  const [room, setRoom] = useState(initial?.room || 'room-1');
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [speechSupported, setSpeechSupported] = useState(false);
@@ -68,6 +77,7 @@ export default function EventForm({ initial, dreamMode, onSave, onCancel }: Even
     setTitle(initial?.title || (dreamMode ? 'Dream' : ''));
     setCategory(initial?.category || (dreamMode ? 'sleep' : 'activity'));
     setDescription(initial?.description || '');
+    setRoom(initial?.room || 'room-1');
   }, [initial, dreamMode]);
 
   const stopRecording = useCallback(() => {
@@ -163,6 +173,7 @@ export default function EventForm({ initial, dreamMode, onSave, onCancel }: Even
       description: description || undefined,
       endTime: endTime || undefined,
       durationMin: computeDuration(time, endTime),
+      room: category === 'experience' ? room : undefined,
     });
   };
 
@@ -239,6 +250,16 @@ export default function EventForm({ initial, dreamMode, onSave, onCancel }: Even
             ))}
           </select>
         </label>
+        {category === 'experience' && (
+          <label>
+            Room
+            <select value={room} onChange={e => setRoom(e.target.value)}>
+              {ROOMS.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <label>
         Title

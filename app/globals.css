@@ -1748,3 +1748,74 @@ body {
   background: rgba(66, 133, 244, 0.18);
   color: #4285f4;
 }
+
+/* ===== Experience Event Room Label ===== */
+.event-popup-room {
+  font-size: 0.8rem;
+  color: #e056fd;
+  font-weight: 600;
+  margin: 2px 0 4px;
+}
+
+/* ===== Viewer Selector Bar (Admin/Artist) ===== */
+.viewer-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.viewer-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.viewer-select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  min-width: 180px;
+}
+
+.viewer-select:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.viewer-badge {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: rgba(108, 92, 231, 0.2);
+  color: var(--accent-secondary);
+}
+
+/* ===== Consent Toggle (Settings) ===== */
+.consent-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-top: 8px;
+}
+
+.consent-toggle input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}
+
+.consent-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 2px 0 10px 26px;
+}

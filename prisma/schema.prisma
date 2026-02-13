@@ -17,6 +17,7 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  role          String    @default("user")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -94,6 +95,8 @@ model UserSettings {
   extraSettings    Json?
   shareKey         String?   @unique
   shareScopes      String[]  @default([])
+  allowAdmin       Boolean   @default(false)
+  allowArtist      Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

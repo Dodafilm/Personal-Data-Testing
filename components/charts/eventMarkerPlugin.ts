@@ -14,6 +14,7 @@ const CATEGORY_COLORS: Record<EventCategory, string> = {
   sleep: '#74b9ff',
   'health-note': '#ff6b6b',
   custom: '#dfe6e9',
+  experience: '#e056fd',
 };
 
 const CATEGORY_LETTERS: Record<EventCategory, string> = {
@@ -21,6 +22,7 @@ const CATEGORY_LETTERS: Record<EventCategory, string> = {
   sleep: 'S',
   'health-note': 'H',
   custom: 'C',
+  experience: 'E',
 };
 
 function getEventColor(event: HealthEvent): string {

@@ -21,6 +21,8 @@ export async function GET() {
 
   const settings: Settings = {
     bgEffect: row.bgEffect ?? undefined,
+    allowAdmin: row.allowAdmin,
+    allowArtist: row.allowArtist,
     ...((row.extraSettings as Record<string, unknown>) ?? {}),
   };
 
@@ -37,12 +39,27 @@ export async function PATCH(request: Request) {
   const patch: Partial<Settings> = await request.json();
 
   // Separate known columns from extra settings
-  const { bgEffect, ...extra } = patch;
+  const { bgEffect, allowAdmin, allowArtist, ...extra } = patch;
 
   const data: Prisma.UserSettingsUpdateInput = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createData: any = {
+    userId: session.user.id,
+    bgEffect: (bgEffect as string) ?? 'particles',
+    extraSettings: (Object.keys(extra).length > 0 ? extra : {}) as Prisma.InputJsonValue,
+  };
 
   if (bgEffect !== undefined) {
     data.bgEffect = bgEffect ?? null;
+  }
+
+  if (allowAdmin !== undefined) {
+    data.allowAdmin = !!allowAdmin;
+    createData.allowAdmin = !!allowAdmin;
+  }
+  if (allowArtist !== undefined) {
+    data.allowArtist = !!allowArtist;
+    createData.allowArtist = !!allowArtist;
   }
 
   // Merge extra settings
@@ -60,11 +77,7 @@ export async function PATCH(request: Request) {
 
   await prisma.userSettings.upsert({
     where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      bgEffect: (bgEffect as string) ?? 'particles',
-      extraSettings: (Object.keys(extra).length > 0 ? extra : {}) as Prisma.InputJsonValue,
-    },
+    create: createData,
     update: data,
   });
 

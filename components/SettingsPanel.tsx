@@ -22,7 +22,7 @@ interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
   settings: Settings;
-  onUpdateSettings: (patch: Partial<Settings>) => void;
+  onUpdateSettings: (patch: Partial<Settings>) => Promise<void> | void;
   bgEffect: string;
   onBgEffectChange: (effect: string) => void;
   onClearData: () => void;
@@ -46,6 +46,8 @@ interface SettingsPanelProps {
 export default function SettingsPanel({
   open,
   onClose,
+  settings,
+  onUpdateSettings,
   bgEffect,
   onBgEffectChange,
   onClearData,
@@ -197,7 +199,7 @@ export default function SettingsPanel({
       <div className={`settings-panel${open ? ' open' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <span className="version-label">v0.4.0</span>
+          <span className="version-label">v0.5.0</span>
           <button className="icon-btn" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">
@@ -236,6 +238,35 @@ export default function SettingsPanel({
               </div>
             )}
           </div>
+
+          {/* Data Access Consent (signed-in users only) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Data Access Consent</h3>
+              <label className="consent-toggle">
+                <input
+                  type="checkbox"
+                  checked={!!settings.allowAdmin}
+                  onChange={e => onUpdateSettings({ allowAdmin: e.target.checked })}
+                />
+                Allow Admin Access
+              </label>
+              <p className="consent-hint">
+                Let the site admin view your health data (name and email visible).
+              </p>
+              <label className="consent-toggle">
+                <input
+                  type="checkbox"
+                  checked={!!settings.allowArtist}
+                  onChange={e => onUpdateSettings({ allowArtist: e.target.checked })}
+                />
+                Allow Artist Access (anonymous)
+              </label>
+              <p className="consent-hint">
+                Let artists view your anonymized health data. Your identity is never shared.
+              </p>
+            </div>
+          )}
 
           {/* Import Data */}
           <div className="setting-group">

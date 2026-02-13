@@ -8,6 +8,7 @@ const CATEGORY_LABELS: Record<EventCategory, string> = {
   sleep: 'Sleep',
   'health-note': 'Health Note',
   custom: 'Calendar',
+  experience: 'Experience',
 };
 
 interface EventPopupProps {
@@ -18,9 +19,10 @@ interface EventPopupProps {
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
+  readOnly?: boolean;
 }
 
-export default function EventPopup({ event, x, y, containerRect, onEdit, onDelete, onClose }: EventPopupProps) {
+export default function EventPopup({ event, x, y, containerRect, onEdit, onDelete, onClose, readOnly }: EventPopupProps) {
   const color = event.color || CATEGORY_COLORS[event.category] || '#dfe6e9';
 
   // Position relative to the container, clamped to bounds
@@ -57,6 +59,9 @@ export default function EventPopup({ event, x, y, containerRect, onEdit, onDelet
           <button className="event-popup-close" onClick={onClose}>&times;</button>
         </div>
         <div className="event-popup-title">{event.title}</div>
+        {event.category === 'experience' && event.room && (
+          <div className="event-popup-room">{event.room.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}</div>
+        )}
         {event.description && <div className="event-popup-desc">{event.description}</div>}
         {event.isAuto && event.id.startsWith('gcal-') && (
           <span className="event-auto-badge event-gcal-badge">Google Calendar</span>
@@ -64,7 +69,7 @@ export default function EventPopup({ event, x, y, containerRect, onEdit, onDelet
         {event.isAuto && !event.id.startsWith('gcal-') && (
           <span className="event-auto-badge">Auto-detected</span>
         )}
-        {!event.isAuto && (
+        {!event.isAuto && !readOnly && (
           <div className="event-popup-actions">
             <button onClick={onEdit}>Edit</button>
             <button onClick={onDelete} className="event-popup-delete">Delete</button>

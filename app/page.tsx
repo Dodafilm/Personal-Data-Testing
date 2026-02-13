@@ -21,7 +21,8 @@ import ActivityCharts from '@/components/charts/ActivityCharts';
 import SyncPrompt from '@/components/SyncPrompt';
 import { clearSampleData, saveSampleDays } from '@/lib/store';
 import dynamic from 'next/dynamic';
-import type { DayRecord, HealthEvent } from '@/lib/types';
+import type { DayRecord, HealthEvent, UserRole } from '@/lib/types';
+import { fetchUserDateRange } from '@/lib/store-cloud';
 
 const ThreeBackground = dynamic(() => import('@/components/three/ThreeBackground'), { ssr: false });
 
@@ -37,6 +38,14 @@ export default function DashboardPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState('particles');
   const [debugData, setDebugData] = useState(true);
+
+  // Viewer state for admin/artist
+  const userRole: UserRole = (session?.user as { role?: UserRole } | undefined)?.role || 'user';
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; label: string; name?: string; email?: string }[]>([]);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const [viewingUserLabel, setViewingUserLabel] = useState<string>('');
+  const [viewedData, setViewedData] = useState<DayRecord[]>([]);
+  const isViewingOther = !!viewingUserId;
 
   // Handle date picker changing to a different date
   const handleDateChange = useCallback((y: number, m: number, d: number) => {
@@ -150,6 +159,60 @@ export default function DashboardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user]);
 
+  // Fetch available users for admin/artist viewer
+  useEffect(() => {
+    if (!session?.user || userRole === 'user') {
+      setAvailableUsers([]);
+      setViewingUserId(null);
+      return;
+    }
+
+    const endpoint = userRole === 'admin' ? '/api/admin/users' : '/api/artist/users';
+    fetch(endpoint)
+      .then(r => r.ok ? r.json() : [])
+      .then((users: { id: string; label?: string; name?: string; email?: string }[]) => {
+        setAvailableUsers(users.map(u => ({
+          id: u.id,
+          label: u.label || u.name || u.email || u.id,
+          name: u.name,
+          email: u.email,
+        })));
+      })
+      .catch(() => setAvailableUsers([]));
+  }, [session?.user, userRole]);
+
+  // Fetch viewed user's data when selection changes
+  useEffect(() => {
+    if (!viewingUserId) {
+      setViewedData([]);
+      return;
+    }
+
+    fetchUserDateRange(viewingUserId, monthData.startStr, monthData.endStr)
+      .then(setViewedData)
+      .catch(() => setViewedData([]));
+  }, [viewingUserId, monthData.startStr, monthData.endStr]);
+
+  // Compute display data: own data or viewed user's data
+  const displayData = isViewingOther ? viewedData : monthData.data;
+  const displayDayRecord = useMemo(() => {
+    if (!isViewingOther) return focusDayRecord;
+    const dayStr = String(monthData.day).padStart(2, '0');
+    const monthStr = String(monthData.month).padStart(2, '0');
+    const target = `${monthData.year}-${monthStr}-${dayStr}`;
+    return viewedData.find(d => d.date === target) ?? null;
+  }, [isViewingOther, focusDayRecord, viewedData, monthData.year, monthData.month, monthData.day]);
+
+  const displayPrevDay = useMemo(() => {
+    if (!isViewingOther) return prevDayRecord;
+    const focus = new Date(monthData.year, monthData.month - 1, monthData.day);
+    focus.setDate(focus.getDate() - 1);
+    const y = focus.getFullYear();
+    const m = String(focus.getMonth() + 1).padStart(2, '0');
+    const d = String(focus.getDate()).padStart(2, '0');
+    return viewedData.find(r => r.date === `${y}-${m}-${d}`) ?? null;
+  }, [isViewingOther, prevDayRecord, viewedData, monthData.year, monthData.month, monthData.day]);
+
   const handleBgEffectChange = useCallback((effect: string) => {
     setBgEffect(effect);
     updateSettings({ bgEffect: effect });
@@ -225,44 +288,77 @@ export default function DashboardPage() {
 
         <SyncPrompt />
 
+        {/* Viewer selector for admin/artist */}
+        {(userRole === 'admin' || userRole === 'artist') && availableUsers.length > 0 && (
+          <div className="viewer-selector-bar">
+            <span className="viewer-label">
+              Viewing:
+            </span>
+            <select
+              className="viewer-select"
+              value={viewingUserId || ''}
+              onChange={e => {
+                const id = e.target.value || null;
+                setViewingUserId(id);
+                const user = availableUsers.find(u => u.id === id);
+                setViewingUserLabel(user?.label || '');
+              }}
+            >
+              <option value="">My Data</option>
+              {availableUsers.map(u => (
+                <option key={u.id} value={u.id}>{u.label}</option>
+              ))}
+            </select>
+            {isViewingOther && (
+              <span className="viewer-badge">{userRole === 'admin' ? 'Admin View' : 'Artist View'}</span>
+            )}
+          </div>
+        )}
+
         {/* Intraday 24h Section */}
         <section className="metric-section">
           <h2 className="section-title">24-Hour View</h2>
-          <DayIntraday day={focusDayRecord} prevDay={prevDayRecord} onDayUpdated={monthData.refresh} gcalEvents={gcalEvents} />
+          <DayIntraday
+            day={displayDayRecord}
+            prevDay={displayPrevDay}
+            onDayUpdated={isViewingOther ? undefined : monthData.refresh}
+            gcalEvents={isViewingOther ? [] : gcalEvents}
+            readOnly={isViewingOther}
+          />
         </section>
 
         {/* Sleep Section */}
         <section className="metric-section">
           <h2 className="section-title sleep">Sleep</h2>
-          <SleepCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <SleepOverlay data={monthData.data} />
+          <SleepCharts data={displayData} onDayClick={setSelectedDay} />
+          <SleepOverlay data={displayData} />
         </section>
 
         {/* Heart Rate Section */}
         <section className="metric-section">
           <h2 className="section-title heart">Heart Rate</h2>
-          <HeartCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <HeartRateOverlay data={monthData.data} />
+          <HeartCharts data={displayData} onDayClick={setSelectedDay} />
+          <HeartRateOverlay data={displayData} />
         </section>
 
         {/* Activity Section */}
         <section className="metric-section">
           <h2 className="section-title workout">Activity</h2>
-          <ActivityCharts data={monthData.data} onDayClick={setSelectedDay} />
-          <ActivityOverlay data={monthData.data} />
+          <ActivityCharts data={displayData} onDayClick={setSelectedDay} />
+          <ActivityOverlay data={displayData} />
         </section>
 
         {/* Stress Section */}
         <section className="metric-section">
           <h2 className="section-title stress">Stress</h2>
-          <StressCharts data={monthData.data} onDayClick={setSelectedDay} />
+          <StressCharts data={displayData} onDayClick={setSelectedDay} />
         </section>
       </div>
 
       <DayDetail
         open={!!selectedDay}
-        day={monthData.data.find(d => d.date === selectedDay) ?? null}
-        monthData={monthData.data}
+        day={displayData.find(d => d.date === selectedDay) ?? null}
+        monthData={displayData}
         onClose={() => setSelectedDay(null)}
         onNavigate={setSelectedDay}
       />

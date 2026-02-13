@@ -1,6 +1,8 @@
 import 'next-auth';
 import 'next-auth/jwt';
 
+export type UserRole = 'user' | 'artist' | 'admin';
+
 declare module 'next-auth' {
   interface Session {
     user: {
@@ -8,6 +10,7 @@ declare module 'next-auth' {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      role: UserRole;
     };
   }
 }
@@ -15,6 +18,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
+    role?: UserRole;
   }
 }
 
@@ -55,7 +59,7 @@ export interface StressData {
   day_summary: string;      // "restored" | "normal" | "stressful"
 }
 
-export type EventCategory = 'activity' | 'sleep' | 'health-note' | 'custom';
+export type EventCategory = 'activity' | 'sleep' | 'health-note' | 'custom' | 'experience';
 
 export interface HealthEvent {
   id: string;
@@ -67,6 +71,7 @@ export interface HealthEvent {
   isAuto?: boolean;         // true = auto-detected, not stored in DB
   endTime?: string;         // "HH:MM" (24h format)
   durationMin?: number;     // duration in minutes
+  room?: string;            // room identifier for experience events
 }
 
 export interface DayRecord {
@@ -85,5 +90,7 @@ export interface Settings {
   corsProxy?: string;
   ouraToken?: string;
   oauthState?: string;
+  allowAdmin?: boolean;
+  allowArtist?: boolean;
   [key: string]: unknown;
 }

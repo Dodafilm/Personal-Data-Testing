@@ -26,7 +26,11 @@
       "Bash(npx prisma db push:*)",
       "WebFetch(domain:jsr.io)",
       "WebFetch(domain:community.home-assistant.io)",
-      "Bash(node scripts/generate-sample-data.mjs:*)"
+      "Bash(node scripts/generate-sample-data.mjs:*)",
+      "WebFetch(domain:hexdocs.pm)",
+      "WebFetch(domain:support.mydatahelps.org)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:pypi.org)"
     ]
   }
 }

@@ -10,6 +10,7 @@ function toJson(val: unknown): Prisma.InputJsonValue | undefined {
 
 // GET /api/health/records?start=YYYY-MM-DD&end=YYYY-MM-DD
 // GET /api/health/records?dates_only=true
+// GET /api/health/records?userId=xxx&start=...&end=... (admin/artist viewing)
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -17,11 +18,55 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
+  const requestedUserId = url.searchParams.get('userId');
+
+  // Determine target user
+  let targetUserId = session.user.id;
+
+  if (requestedUserId && requestedUserId !== session.user.id) {
+    // Verify caller has permission and target user consented
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const isAdmin = adminEmail && session.user.email === adminEmail;
+
+    let isArtist = false;
+    if (!isAdmin) {
+      const callerUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      });
+      isArtist = callerUser?.role === 'artist';
+    }
+
+    if (!isAdmin && !isArtist) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Verify target user consented
+    const targetSettings = await prisma.userSettings.findUnique({
+      where: { userId: requestedUserId },
+      select: { allowAdmin: true, allowArtist: true },
+    });
+
+    if (!targetSettings) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (isAdmin && !targetSettings.allowAdmin) {
+      return NextResponse.json({ error: 'User has not consented to admin access' }, { status: 403 });
+    }
+
+    if (isArtist && !isAdmin && !targetSettings.allowArtist) {
+      return NextResponse.json({ error: 'User has not consented to artist access' }, { status: 403 });
+    }
+
+    targetUserId = requestedUserId;
+  }
+
   const datesOnly = url.searchParams.get('dates_only') === 'true';
 
   if (datesOnly) {
     const records = await prisma.healthRecord.findMany({
-      where: { userId: session.user.id },
+      where: { userId: targetUserId },
       select: { date: true },
       orderBy: { date: 'asc' },
     });
@@ -32,7 +77,7 @@ export async function GET(request: Request) {
   const end = url.searchParams.get('end');
 
   const where: { userId: string; date?: { gte?: string; lte?: string } } = {
-    userId: session.user.id,
+    userId: targetUserId,
   };
   if (start || end) {
     where.date = {};

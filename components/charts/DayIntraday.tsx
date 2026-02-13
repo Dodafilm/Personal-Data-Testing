@@ -20,9 +20,10 @@ interface DayIntradayProps {
   prevDay?: DayRecord | null;
   onDayUpdated?: () => void;
   gcalEvents?: HealthEvent[];
+  readOnly?: boolean;
 }
 
-export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [] }: DayIntradayProps) {
+export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [], readOnly }: DayIntradayProps) {
   const store = useStore();
   const [showSleep, setShowSleep] = useState(true);
   const [showHeart, setShowHeart] = useState(true);
@@ -422,20 +423,24 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
             >
               Activity
             </button>
-            <button
-              className="intraday-add-btn"
-              onClick={() => { setShowForm(true); setDreamMode(false); setEditingEvent(null); }}
-              title="Add event marker"
-            >
-              +
-            </button>
-            <button
-              className="intraday-dream-btn"
-              onClick={() => { setShowForm(true); setDreamMode(true); setEditingEvent(null); }}
-              title="Record a dream"
-            >
-              🌙
-            </button>
+            {!readOnly && (
+              <>
+                <button
+                  className="intraday-add-btn"
+                  onClick={() => { setShowForm(true); setDreamMode(false); setEditingEvent(null); }}
+                  title="Add event marker"
+                >
+                  +
+                </button>
+                <button
+                  className="intraday-dream-btn"
+                  onClick={() => { setShowForm(true); setDreamMode(true); setEditingEvent(null); }}
+                  title="Record a dream"
+                >
+                  🌙
+                </button>
+              </>
+            )}
           </div>
           {viewMode === 'full' && (
             <label className="hypnogram-start-label">
@@ -480,13 +485,14 @@ export default function DayIntraday({ day, prevDay, onDayUpdated, gcalEvents = [
             x={activePopup.x}
             y={activePopup.y}
             containerRect={cardRef.current.getBoundingClientRect()}
-            onEdit={() => {
+            onEdit={readOnly ? () => setActivePopup(null) : () => {
               setEditingEvent(activePopup.event);
               setShowForm(true);
               setActivePopup(null);
             }}
-            onDelete={() => handleDeleteEvent(activePopup.event.id)}
+            onDelete={readOnly ? () => setActivePopup(null) : () => handleDeleteEvent(activePopup.event.id)}
             onClose={() => setActivePopup(null)}
+            readOnly={readOnly}
           />
         )}
       </div>

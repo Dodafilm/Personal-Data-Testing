@@ -65,6 +65,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+
+        // Determine role: admin by env var, otherwise read from DB
+        const adminEmail = process.env.ADMIN_EMAIL;
+        if (adminEmail && user.email === adminEmail) {
+          token.role = 'admin';
+        } else {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id as string },
+            select: { role: true },
+          });
+          token.role = (dbUser?.role as 'user' | 'artist' | 'admin') || 'user';
+        }
       }
       // When signing in with Google, update the Account record with fresh tokens
       // (Auth.js only writes tokens on first link, not on subsequent sign-ins)
@@ -83,6 +95,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.role = (token.role as 'user' | 'artist' | 'admin') || 'user';
       }
       return session;
     },

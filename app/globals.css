@@ -2235,3 +2235,350 @@ body {
   margin-left: 4px;
   font-style: italic;
 }
+
+/* ===== Installation Manager ===== */
+.installation-manager {
+  margin-top: 8px;
+}
+
+.installation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.installation-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  transition: border-color var(--transition);
+}
+
+.installation-card.inactive {
+  opacity: 0.6;
+  border-color: var(--text-muted);
+}
+
+.installation-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.installation-card-header strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.installation-room {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  margin-left: 8px;
+  border-radius: 10px;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent-secondary);
+}
+
+.installation-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.installation-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.installation-sessions {
+  color: var(--accent-workout);
+  font-weight: 600;
+}
+
+.installation-scopes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.scope-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(108, 92, 231, 0.12);
+  color: var(--accent-secondary);
+}
+
+.scope-tag.scope-sleep { color: var(--accent-sleep); background: rgba(116, 185, 255, 0.12); }
+.scope-tag.scope-heart { color: var(--accent-heart); background: rgba(255, 107, 107, 0.12); }
+.scope-tag.scope-workout { color: var(--accent-workout); background: rgba(85, 239, 196, 0.12); }
+.scope-tag.scope-stress { color: var(--accent-stress); background: rgba(255, 165, 0, 0.12); }
+
+.installation-api-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
+.installation-api-key label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.installation-api-key code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  padding: 3px 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.installation-api-key code.masked {
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.installation-api-key code.checkin-url {
+  max-width: 260px;
+}
+
+/* Installation create/edit forms */
+.installation-create-form,
+.installation-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.installation-create-form h4 {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.installation-create-form input[type="text"],
+.installation-create-form input[type="number"],
+.installation-create-form select,
+.installation-edit-form input[type="text"],
+.installation-edit-form input[type="number"],
+.installation-edit-form select {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.installation-create-form input:focus,
+.installation-create-form select:focus,
+.installation-edit-form input:focus,
+.installation-edit-form select:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.installation-scopes-edit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.installation-scopes-edit > label:first-child {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.scope-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.scope-checkbox input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}
+
+.timeout-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeout-edit label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.timeout-edit input[type="number"] {
+  width: 80px;
+}
+
+.timeout-edit span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.installation-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Device assignment form */
+.device-assign-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.assign-row {
+  display: flex;
+  gap: 8px;
+}
+
+.assign-row input {
+  flex: 1;
+}
+
+.device-assign-form input,
+.device-assign-form select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.device-assign-form input:focus,
+.device-assign-form select:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+/* ===== Device Manager ===== */
+.device-manager {
+  margin-top: 4px;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.device-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.device-type-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(108, 92, 231, 0.15);
+  color: var(--accent-secondary);
+}
+
+.device-label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.device-hash {
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--text-muted);
+}
+
+.device-pair-form {
+  margin-top: 12px;
+}
+
+.device-pair-form label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.pair-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pairing-code-input {
+  width: 100px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pairing-code-input:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+/* ===== Small button variant ===== */
+.btn-sm {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}

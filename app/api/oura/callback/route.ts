@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { encrypt } from '@/lib/crypto';
 
 const TOKEN_URL = 'https://api.ouraring.com/oauth/token';
 
@@ -58,20 +59,23 @@ export async function GET(request: Request) {
     const refreshToken = tokenData.refresh_token ?? null;
     const expiresIn = tokenData.expires_in || 86400;
 
-    // Store tokens in DB for authenticated users
+    // Store tokens encrypted in DB for authenticated users
     const session = await auth();
     if (session?.user?.id) {
+      const encryptedAccess = encrypt(accessToken);
+      const encryptedRefresh = refreshToken ? encrypt(refreshToken) : null;
+
       await prisma.userSettings.upsert({
         where: { userId: session.user.id },
         create: {
           userId: session.user.id,
-          ouraAccessToken: accessToken,
-          ouraRefreshToken: refreshToken,
+          ouraAccessToken: encryptedAccess,
+          ouraRefreshToken: encryptedRefresh,
           ouraTokenExpiry: new Date(Date.now() + expiresIn * 1000),
         },
         update: {
-          ouraAccessToken: accessToken,
-          ouraRefreshToken: refreshToken,
+          ouraAccessToken: encryptedAccess,
+          ouraRefreshToken: encryptedRefresh,
           ouraTokenExpiry: new Date(Date.now() + expiresIn * 1000),
         },
       });

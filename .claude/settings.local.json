@@ -30,7 +30,14 @@
       "WebFetch(domain:hexdocs.pm)",
       "WebFetch(domain:support.mydatahelps.org)",
       "WebFetch(domain:pub.dev)",
-      "WebFetch(domain:pypi.org)"
+      "WebFetch(domain:pypi.org)",
+      "Bash(cat:*)",
+      "Bash(git rm:*)",
+      "Bash(where:*)",
+      "Bash(java:*)",
+      "Bash(git stash:*)",
+      "Bash(git status:*)",
+      "Bash(ls:*)"
     ]
   }
 }

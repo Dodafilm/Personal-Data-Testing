@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
 
 const VALID_SCOPES = ['sleep', 'heart', 'workout', 'stress'];
 
@@ -29,7 +30,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await parseJsonBody<{ scopes?: string[] }>(request);
+  if (isErrorResponse(body)) return body;
   const scopes: string[] = Array.isArray(body.scopes)
     ? body.scopes.filter((s: string) => VALID_SCOPES.includes(s))
     : [];

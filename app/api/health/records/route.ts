@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
 import type { DayRecord } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
@@ -176,7 +177,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const day: DayRecord = await request.json();
+  const body = await parseJsonBody<DayRecord>(request);
+  if (isErrorResponse(body)) return body;
+  const day = body;
   if (!day.date) {
     return NextResponse.json({ error: 'date is required' }, { status: 400 });
   }
@@ -193,9 +196,14 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { records }: { records: DayRecord[] } = await request.json();
+  const putBody = await parseJsonBody<{ records: DayRecord[] }>(request);
+  if (isErrorResponse(putBody)) return putBody;
+  const { records } = putBody;
   if (!Array.isArray(records)) {
     return NextResponse.json({ error: 'records array required' }, { status: 400 });
+  }
+  if (records.length > 1000) {
+    return NextResponse.json({ error: 'Too many records (max 1000)' }, { status: 400 });
   }
 
   let count = 0;
@@ -208,16 +216,39 @@ export async function PUT(request: Request) {
   return NextResponse.json({ ok: true, count });
 }
 
-// DELETE /api/health/records — clear all user data
-export async function DELETE() {
+// DELETE /api/health/records — clear all user data (comprehensive right-to-erasure)
+export async function DELETE(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const full = url.searchParams.get('full') === 'true';
+
   const { count } = await prisma.healthRecord.deleteMany({
     where: { userId: session.user.id },
   });
 
-  return NextResponse.json({ ok: true, deleted: count });
+  const result: Record<string, number> = { healthRecords: count };
+
+  // Full erasure: also delete installation sessions, device tokens, and audit logs
+  if (full) {
+    const sessions = await prisma.installationSession.deleteMany({
+      where: { participantId: session.user.id },
+    });
+    result.installationSessions = sessions.count;
+
+    const devices = await prisma.deviceToken.deleteMany({
+      where: { userId: session.user.id },
+    });
+    result.deviceTokens = devices.count;
+
+    const audits = await prisma.auditLog.deleteMany({
+      where: { userId: session.user.id },
+    });
+    result.auditLogs = audits.count;
+  }
+
+  return NextResponse.json({ ok: true, deleted: result });
 }

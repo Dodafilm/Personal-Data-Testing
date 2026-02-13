@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { tryDecrypt } from '@/lib/crypto';
 
 const BASE_URL = 'https://api.ouraring.com';
 
@@ -33,7 +34,8 @@ export async function GET(
     });
     if (settings?.ouraAccessToken) {
       if (!settings.ouraTokenExpiry || settings.ouraTokenExpiry > new Date()) {
-        token = settings.ouraAccessToken;
+        // Try to decrypt (encrypted tokens) or use as-is (pre-migration plaintext)
+        token = tryDecrypt(settings.ouraAccessToken) ?? settings.ouraAccessToken;
       }
     }
   }

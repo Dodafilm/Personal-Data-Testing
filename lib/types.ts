@@ -94,6 +94,45 @@ export interface HealthGoal {
   period: GoalPeriod;
 }
 
+// ── Installation system types ────────────────────────────
+
+export type DataScope = 'sleep' | 'heart' | 'workout' | 'stress';
+
+export interface Installation {
+  id: string;
+  artistId: string;
+  name: string;
+  room: string;
+  apiKey: string;
+  dataScopes: DataScope[];
+  active: boolean;
+  timeoutMin: number;
+  activeSessions?: number;
+}
+
+export interface InstallationPublic {
+  id: string;
+  name: string;
+  room: string;
+  artistName?: string;
+}
+
+export type DeviceTokenType = 'nfc' | 'rfid' | 'ble' | 'other';
+
+export interface DeviceToken {
+  id: string;
+  userId?: string | null;
+  identifierHash: string;
+  label?: string | null;
+  type: DeviceTokenType;
+  createdAt: string;
+}
+
+export interface PairingResult {
+  pairingCode: string;
+  expiresAt: string;
+}
+
 export interface Settings {
   bgEffect?: string;
   ouraClientId?: string;

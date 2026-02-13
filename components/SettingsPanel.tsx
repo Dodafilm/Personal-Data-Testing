@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import type { Settings } from '@/lib/types';
+import type { Settings, UserRole } from '@/lib/types';
 import { normalizeJson, normalizeCsv, parseCsvString } from '@/lib/data-adapter';
 import { useStore } from '@/lib/store-provider';
+import InstallationManager from './InstallationManager';
+import DeviceManager from './DeviceManager';
 
 function useOrigin() {
   const [origin, setOrigin] = useState('');
@@ -199,7 +201,7 @@ export default function SettingsPanel({
       <div className={`settings-panel${open ? ' open' : ''}`}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <span className="version-label">v0.5.0</span>
+          <span className="version-label">v0.6.0</span>
           <button className="icon-btn" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
         <div className="settings-body">
@@ -265,6 +267,28 @@ export default function SettingsPanel({
               <p className="consent-hint">
                 Let artists view your anonymized health data. Your identity is never shared.
               </p>
+            </div>
+          )}
+
+          {/* Linked Devices (signed-in users) */}
+          {session?.user && (
+            <div className="setting-group">
+              <h3>Linked Devices</h3>
+              <p className="setting-hint">
+                Link your phone, watch, or RFID wristband to check in at installations automatically.
+              </p>
+              <DeviceManager />
+            </div>
+          )}
+
+          {/* Installations (artist/admin only) */}
+          {session?.user && ((session.user as { role?: UserRole }).role === 'artist' || (session.user as { role?: UserRole }).role === 'admin') && (
+            <div className="setting-group">
+              <h3>Installations</h3>
+              <p className="setting-hint">
+                Create and manage art installations. Each installation gets an API key for hardware and a check-in URL for participants.
+              </p>
+              <InstallationManager />
             </div>
           )}
 

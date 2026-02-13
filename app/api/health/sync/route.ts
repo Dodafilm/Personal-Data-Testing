@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
 import type { DayRecord } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
@@ -15,9 +16,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { records }: { records: DayRecord[] } = await request.json();
+  const body = await parseJsonBody<{ records: DayRecord[] }>(request);
+  if (isErrorResponse(body)) return body;
+  const { records } = body;
   if (!Array.isArray(records) || records.length === 0) {
     return NextResponse.json({ error: 'records array required' }, { status: 400 });
+  }
+  if (records.length > 1000) {
+    return NextResponse.json({ error: 'Too many records (max 1000)' }, { status: 400 });
   }
 
   let synced = 0;

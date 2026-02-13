@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { audit, getClientIp } from '@/lib/audit';
+import { parseJsonBody, isErrorResponse } from '@/lib/api-utils';
 import type { Settings } from '@/lib/types';
 import type { Prisma } from '@prisma/client';
 
@@ -36,7 +38,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const patch: Partial<Settings> = await request.json();
+  const body = await parseJsonBody<Partial<Settings>>(request);
+  if (isErrorResponse(body)) return body;
+  const patch = body;
 
   // Separate known columns from extra settings
   const { bgEffect, allowAdmin, allowArtist, ...extra } = patch;
@@ -60,6 +64,30 @@ export async function PATCH(request: Request) {
   if (allowArtist !== undefined) {
     data.allowArtist = !!allowArtist;
     createData.allowArtist = !!allowArtist;
+  }
+
+  // Audit consent changes
+  if (allowAdmin !== undefined || allowArtist !== undefined) {
+    const existing = await prisma.userSettings.findUnique({
+      where: { userId: session.user.id },
+      select: { allowAdmin: true, allowArtist: true },
+    });
+    const changes: Record<string, { from: boolean; to: boolean }> = {};
+    if (allowAdmin !== undefined && existing?.allowAdmin !== !!allowAdmin) {
+      changes.allowAdmin = { from: existing?.allowAdmin ?? false, to: !!allowAdmin };
+    }
+    if (allowArtist !== undefined && existing?.allowArtist !== !!allowArtist) {
+      changes.allowArtist = { from: existing?.allowArtist ?? false, to: !!allowArtist };
+    }
+    if (Object.keys(changes).length > 0) {
+      audit({
+        userId: session.user.id,
+        action: 'consent.change',
+        resource: `user:${session.user.id}`,
+        detail: changes,
+        ip: getClientIp(request),
+      });
+    }
   }
 
   // Merge extra settings

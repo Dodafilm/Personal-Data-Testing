@@ -5,6 +5,7 @@ import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 const providers: Provider[] = [];
 
@@ -36,18 +37,26 @@ providers.push(
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Rate limit by email to prevent brute-force attacks
+        const rl = checkRateLimit(`login:${(credentials.email as string).toLowerCase()}`, RATE_LIMITS.auth);
+        if (!rl.allowed) return null;
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
 
-        if (!user || !user.passwordHash) return null;
+        // Always run bcrypt.compare to prevent timing-based user enumeration.
+        // If user doesn't exist, compare against a dummy hash so the
+        // response time is indistinguishable from a real comparison.
+        const DUMMY_HASH = '$2a$12$x00000000000000000000u0000000000000000000000000000000';
+        const hashToCompare = user?.passwordHash || DUMMY_HASH;
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
-          user.passwordHash,
+          hashToCompare,
         );
 
-        if (!isValid) return null;
+        if (!isValid || !user) return null;
 
         return { id: user.id, name: user.name, email: user.email, image: user.image };
       },

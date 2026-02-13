@@ -25,6 +25,11 @@ model User {
   sessions      Session[]
   healthRecords HealthRecord[]
   userSettings  UserSettings?
+
+  // Installation system
+  installations         Installation[]        @relation("ArtistInstallations")
+  installationSessions  InstallationSession[]  @relation("ParticipantSessions")
+  deviceTokens          DeviceToken[]
 }
 
 model Account {
@@ -101,4 +106,68 @@ model UserSettings {
   updatedAt        DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Installation system ─────────────────────────────────
+
+model Installation {
+  id         String   @id @default(cuid())
+  artistId   String
+  name       String
+  room       String
+  apiKey     String   @unique @default(uuid())
+  dataScopes String[] @default([])
+  active     Boolean  @default(true)
+  timeoutMin Int      @default(120)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  artist   User                  @relation("ArtistInstallations", fields: [artistId], references: [id], onDelete: Cascade)
+  sessions InstallationSession[]
+}
+
+model InstallationSession {
+  id              String    @id @default(cuid())
+  installationId  String
+  participantId   String
+  deviceTokenId   String?
+  eventId         String?
+  checkinAt       DateTime  @default(now())
+  checkoutAt      DateTime?
+
+  installation Installation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  participant  User         @relation("ParticipantSessions", fields: [participantId], references: [id], onDelete: Cascade)
+  deviceToken  DeviceToken? @relation(fields: [deviceTokenId], references: [id], onDelete: SetNull)
+
+  @@index([installationId, checkinAt])
+  @@index([participantId, checkinAt])
+}
+
+model DeviceToken {
+  id               String    @id @default(cuid())
+  userId           String?
+  identifierHash   String    @unique
+  label            String?
+  type             String    @default("nfc")
+  pairingCode      String?   @unique
+  pairingExpiresAt DateTime?
+  createdAt        DateTime  @default(now())
+
+  user     User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions InstallationSession[]
+}
+
+// ── Audit logging ───────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // consent.change, data.access, device.pair, session.create, etc.
+  resource  String?  // e.g. "installation:abc123", "user:def456"
+  detail    Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
 }
